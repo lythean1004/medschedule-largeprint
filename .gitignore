@@ -1,0 +1,5 @@
+verify_*.py
+deploy_*.json
+*.env
+.env.*
+SOLAR_PRO_API_KEY*
