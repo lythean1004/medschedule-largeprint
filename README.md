@@ -94,9 +94,13 @@ vercel dev
 ## 프로젝트 구조
 
 ├── .gitignore
+
 ├── index.html
+
 ├── api/
+
 │   └── schedule.js
+
 └── package.json
 
 ## 라이선스
