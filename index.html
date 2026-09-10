@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>약 먹는 시간표</title>
+<style>
+  :root { --bg: #ffffff; --ink: #111111; --soft: #f4f4f4; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 16px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 28pt; line-height: 1.35; margin: 0 0 8px; }
+  .sub { font-size: 14pt; color: #555; margin: 0 0 20px; }
+  .card {
+    border: 1px solid #cfcfcf;
+    background: var(--soft);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .upload-btn {
+    display: inline-block;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 18pt;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+  }
+  .upload-btn:hover { background: #333; }
+  .upload-btn:disabled { background: #bbb; cursor: default; }
+  .result {
+    font-size: 20pt;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: keep-all;
+  }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .secondary {
+    background: #fff;
+    color: #111;
+    border: 1px solid #cfcfcf;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 15pt;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .secondary:hover { background: #f0f0f0; }
+  .err { font-size: 16pt; color: #b00020; }
+  .meta { font-size: 12pt; color: #777; margin-top: 10px; }
+  .screen-only { margin-top: 14px; font-size: 14pt; color: #666; }
+
+  @media print {
+    @page { size: A4; margin: 15mm; }
+    body { font-family: "Malgun Gothic", sans-serif; background: #fff; color: #000; }
+    .screen-only { display: none; }
+    .wrap { max-width: none; margin: 0; padding: 0; }
+    .card { border: none; background: #fff; padding: 0; }
+    .btn-row { display: none; }
+    .upload-btn { display: none; }
+    .sub { color: #000; }
+    h1 { font-size: 24pt; margin-bottom: 10px; }
+    .result { font-size: 20pt; line-height: 1.5; }
+    .elder { font-size: 20pt; line-height: 1.5; }
+    .elder h2 { font-size: 24pt; }
+    .guardian { font-size: 11pt; page-break-before: always; }
+    .timeblock { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>약 먹는 시간표</h1>
+    <p class="sub">약봉투 사진 한 장만 올려주세요. 회원가입·앱 설치 없이 바로 볼 수 있습니다.</p>
+
+    <div class="card">
+      <label class="upload-btn" id="pick">약봉투 사진 올리기</label>
+      <input type="file" id="file" accept="image/*" style="display:none">
+      <p class="meta" id="hint">사진을 고르면 바로 시간표를 만들어 드립니다.</p>
+    </div>
+
+    <div class="screen-only" id="status" style="display:none;">
+      <div class="card"><p>지금 봉투 사진의 글씨를 읽고 있어요. 잠시만 기다려 주세요.</p></div>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+      <div class="result elder" id="result"></div>
+      <div class="btn-row">
+        <button class="secondary" id="printBtn" type="button">인쇄 / 저장</button>
+        <button class="secondary" id="resetBtn" type="button">다른 봉투 보기</button>
+      </div>
+      <p class="meta" id="sourceNote"></p>
+    </div>
+
+    <div id="errCard" style="display:none;"></div>
+  </div>
+
+<script>
+(function () {
+  var pick = document.getElementById("pick");
+  var file = document.getElementById("file");
+  var hint = document.getElementById("hint");
+  var status = document.getElementById("status");
+  var resultCard = document.getElementById("resultCard");
+  var result = document.getElementById("result");
+  var sourceNote = document.getElementById("sourceNote");
+  var errCard = document.getElementById("errCard");
+  var printBtn = document.getElementById("printBtn");
+  var resetBtn = document.getElementById("resetBtn");
+
+  function showErr(msg) {
+    errCard.style.display = "block";
+    errCard.innerHTML = '<div class="card"><p class="err">' + escapeHtml(msg) + '</p></div>';
+    resultCard.style.display = "none";
+    status.style.display = "none";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function hideAll() {
+    errCard.style.display = "none";
+    resultCard.style.display = "none";
+    status.style.display = "none";
+  }
+
+  pick.addEventListener("click", function () {
+    hideAll();
+    file.click();
+  });
+
+  file.addEventListener("change", function () {
+    var f = file.files && file.files[0];
+    if (!f) return;
+    hint.textContent = "사진: " + f.name;
+    status.style.display = "block";
+    resultCard.style.display = "none";
+    errCard.style.display = "none";
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      postSchedule(dataUrl);
+    };
+    reader.onerror = function () {
+      showErr("사진을 읽는 중 오류가 났습니다. 다시 골라 주세요.");
+    };
+    reader.readAsDataURL(f);
+  });
+
+  function postSchedule(dataUrl) {
+    fetch("/api/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_b64: dataUrl })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        status.style.display = "none";
+        if (json.error) {
+          showErr(json.error);
+          return;
+        }
+        result.textContent = json.schedule || "";
+        resultCard.style.display = "block";
+        sourceNote.textContent = "이 표는 약봉투에 적힌 내용을 옮긴 것입니다. 약 이름·용량이 맞는지 보호자가 확인해 주세요.";
+      })
+      .catch(function () {
+        status.style.display = "none";
+        showErr("시간표를 만드는 중 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.");
+      });
+  }
+
+  printBtn.addEventListener("click", function () {
+    window.print();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    file.value = "";
+    hideAll();
+    hint.textContent = "사진을 고르면 바로 시간표를 만들어 드립니다.";
+    result.textContent = "";
+  });
+})();
+</script>
+</body>
+</html>
