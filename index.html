@@ -4,199 +4,365 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>약 먹는 시간표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #ffffff; --ink: #111111; --soft: #f4f4f4; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  :root {
+    --bg-warm: #FAF8F5;
+    --bg-card: #FFFFFF;
+    --ink-main: #1A202C;
+    --ink-sub: #4A5568;
+    --ink-light: #718096;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --accent-text: #FFFFFF;
+    --safe-bg: #F0FDF4;
+    --safe-text: #16A34A;
+    --safe-border: #BBF7D0;
+    --border-light: #E5E7EB;
+    --shadow-card: 0 10px 40px -12px rgba(26, 32, 44, 0.12);
+    --shadow-soft: 0 4px 16px -8px rgba(26, 32, 44, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
   body {
-    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-    color: var(--ink);
-    background: var(--bg);
-    padding: 16px;
+    font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg-warm);
+    color: var(--ink-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding: 24px 16px;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
-  .wrap { max-width: 880px; margin: 0 auto; }
-  h1 { font-size: 28pt; line-height: 1.35; margin: 0 0 8px; }
-  .sub { font-size: 14pt; color: #555; margin: 0 0 20px; }
-  .card {
-    border: 1px solid #cfcfcf;
-    background: var(--soft);
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 18px;
+
+  .page {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 8px 0 40px;
   }
-  .upload-btn {
-    display: inline-block;
-    background: #111;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-size: 18pt;
+
+  /* 안심 배지 섹션 */
+  .safety-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-size: 15pt;
     font-weight: 700;
+    background: var(--safe-bg);
+    color: var(--safe-text);
+    border: 1.5px solid var(--safe-border);
+    box-shadow: var(--shadow-soft);
+    letter-spacing: -0.01em;
+  }
+
+  .badge-icon { width: 22px; height: 22px; flex-shrink: 0; }
+
+  /* 헤더 */
+  .header { text-align: center; padding: 8px 0 4px; }
+
+  .header-icon-wrap {
+    width: 64px; height: 64px;
+    margin: 0 auto 12px;
+    background: var(--accent);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px -8px rgba(37, 99, 235, 0.28);
+  }
+
+  .header-icon { width: 36px; height: 36px; color: var(--accent-text); }
+
+  h1.title {
+    font-size: clamp(34pt, 6vw, 44pt);
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    color: var(--ink-main);
+    margin: 0 0 8px;
+  }
+
+  .subtitle {
+    font-size: clamp(17pt, 3vw, 20pt);
+    font-weight: 500;
+    color: var(--ink-sub);
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  /* 메인 카드 (CTA) */
+  .upload-card {
+    background: var(--bg-card);
+    border-radius: 28px;
+    padding: 32px 24px 28px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-light);
+    text-align: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .upload-card:hover { transform: translateY(-2px); box-shadow: 0 16px 48px -16px rgba(26, 32, 44, 0.16); }
+
+  .upload-card-label {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 16px;
+    padding: 18px 24px;
+    font-size: clamp(20pt, 4vw, 26pt);
+    font-weight: 800;
     cursor: pointer;
     width: 100%;
     text-align: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.32);
+    letter-spacing: -0.015em;
+    line-height: 1.2;
   }
-  .upload-btn:hover { background: #333; }
-  .upload-btn:disabled { background: #bbb; cursor: default; }
-  .result {
-    font-size: 20pt;
+
+  .upload-card-label:hover { background: var(--accent-hover); transform: scale(1.01); }
+  .upload-card-label:active { transform: scale(0.985); box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.32); }
+  .upload-card-label:focus-visible { outline: 4px solid rgba(37, 99, 235, 0.4); outline-offset: 3px; }
+
+  .upload-card-label-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .upload-icon-wrap {
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+
+  .upload-icon { width: 34px; height: 34px; color: var(--accent-text); }
+
+  .upload-hint {
+    font-size: clamp(13pt, 2.4vw, 15pt);
+    color: var(--accent-text);
+    font-weight: 600;
+    opacity: 0.92;
+    margin-top: 2px;
+  }
+
+  .preset-note {
+    margin-top: 18px;
+    font-size: clamp(12pt, 2.2vw, 13.5pt);
+    color: var(--ink-light);
+    font-weight: 500;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .preset-note-icon { width: 20px; height: 20px; color: var(--ink-light); flex-shrink: 0; }
+
+  /* 안내 상태 */
+  .status-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-light);
+    text-align: center;
+  }
+
+  .status-text { font-size: clamp(16pt, 3vw, 19pt); font-weight: 700; color: var(--ink-main); line-height: 1.45; }
+
+  .status-spinner {
+    width: 28px; height: 28px;
+    margin: 0 auto 10px;
+    border: 4px solid var(--border-light);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 결과 영역 */
+  .result-card {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 28px 22px 26px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-light);
+  }
+
+  .result-inner {
+    font-size: clamp(20pt, 4.5vw, 24pt);
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: keep-all;
+    font-weight: 700;
+    color: var(--ink-main);
+    letter-spacing: -0.01em;
   }
-  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .secondary {
-    background: #fff;
-    color: #111;
-    border: 1px solid #cfcfcf;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 15pt;
+
+  .result-inner h2 {
+    font-size: clamp(26pt, 5.5vw, 32pt);
+    font-weight: 800;
+    margin: 10px 0 4px;
+    letter-spacing: -0.02em;
+  }
+
+  .result-source {
+    margin-top: 14px;
+    font-size: clamp(12pt, 2.2vw, 13.5pt);
+    color: var(--ink-light);
+    font-weight: 500;
+    line-height: 1.5;
+    padding: 12px 14px;
+    background: var(--safe-bg);
+    border-radius: 12px;
+    border: 1px solid var(--safe-border);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    justify-content: center;
+  }
+
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--ink-main);
+    border: 2px solid var(--border-light);
+    border-radius: 14px;
+    padding: 14px 22px;
+    font-size: clamp(16pt, 3vw, 19pt);
     font-weight: 700;
     cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-soft);
+    min-height: 56px;
   }
-  .secondary:hover { background: #f0f0f0; }
-  .err { font-size: 16pt; color: #b00020; }
-  .meta { font-size: 12pt; color: #777; margin-top: 10px; }
-  .screen-only { margin-top: 14px; font-size: 14pt; color: #666; }
+
+  .btn-secondary:hover { background: #F7F6F3; border-color: #C5C9D0; transform: translateY(-1px); }
+  .btn-secondary:active { transform: translateY(0px); }
+  .btn-secondary:focus-visible { outline: 3px solid rgba(37, 99, 235, 0.35); outline-offset: 2px; }
+
+  .error-card {
+    background: #FFF5F5;
+    color: #C53030;
+    border-radius: 20px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow-soft);
+    border: 1.5px solid #FED7D7;
+    font-size: clamp(15pt, 3vw, 18pt);
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.45;
+  }
+
+  .error-card-icon { width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+
+  .screen-only { display: block; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .upload-btn { display: none; }
 
   @media print {
     @page { size: A4; margin: 15mm; }
-    body { font-family: "Malgun Gothic", sans-serif; background: #fff; color: #000; }
-    .screen-only { display: none; }
-    .wrap { max-width: none; margin: 0; padding: 0; }
-    .card { border: none; background: #fff; padding: 0; }
-    .btn-row { display: none; }
-    .upload-btn { display: none; }
-    .sub { color: #000; }
-    h1 { font-size: 24pt; margin-bottom: 10px; }
-    .result { font-size: 20pt; line-height: 1.5; }
-    .elder { font-size: 20pt; line-height: 1.5; }
-    .elder h2 { font-size: 24pt; }
-    .guardian { font-size: 11pt; page-break-before: always; }
-    .timeblock { break-inside: avoid; }
+    body { background: #fff; color: #000; padding: 0; display: block; }
+    .page { max-width: none; margin: 0; padding: 0; }
+    .safety-badges, .upload-card, .btn-row, .status-card, .error-card { display: none !important; }
+    .header { text-align: left; padding: 0; }
+    .header-icon-wrap, .header-icon, .header-icon-svg, .header-sub-svg { display: none; }
+    .subtitle { color: #000; font-size: 16pt; }
+    h1.title { font-size: 26pt; }
+    .result-card { box-shadow: none; border: none; padding: 0; }
+    .result-inner { font-size: 20pt; line-height: 1.5; }
+    .result-inner h2 { font-size: 24pt; }
+    .result-source { font-size: 11pt; color: #333; background: none; border: none; }
+    .btn-secondary { display: none !important; }
+    .preset-note { display: none !important; }
+    .result-inner::before { content: "약 먹는 시간표 — 출력본 (보호자 확인용)"; display: block; font-size: 12pt; color: #666; margin-bottom: 8px; font-weight: 600; }
   }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>약 먹는 시간표</h1>
-    <p class="sub">약봉투 사진 한 장만 올려주세요. 회원가입·앱 설치 없이 바로 볼 수 있습니다.</p>
-
-    <div class="card">
-      <label class="upload-btn" id="pick">약봉투 사진 올리기</label>
-      <input type="file" id="file" accept="image/*" style="display:none">
-      <p class="meta" id="hint">사진을 고르면 바로 시간표를 만들어 드립니다.</p>
+  <div class="page">
+    <div class="safety-badges" role="group" aria-label="안심 요소">
+      <span class="badge"><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>회원가입·앱 설치 없음</span>
+      <span class="badge"><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v8m-4-4h8"/></svg>비용 없음</span>
+      <span class="badge"><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>사진 한 장이면 끝</span>
     </div>
-
-    <div class="screen-only" id="status" style="display:none;">
-      <div class="card"><p>지금 봉투 사진의 글씨를 읽고 있어요. 잠시만 기다려 주세요.</p></div>
-    </div>
-
-    <div class="card" id="resultCard" style="display:none;">
-      <div class="result elder" id="result"></div>
-      <div class="btn-row">
-        <button class="secondary" id="printBtn" type="button">인쇄 / 저장</button>
-        <button class="secondary" id="resetBtn" type="button">다른 봉투 보기</button>
+    <div class="header">
+      <div class="header-icon-wrap" aria-hidden="true">
+        <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 2 5.5 5.5 0 0 0 11 7.5c0 2.33 1.84 5.07 3 5.5l3 3"/>
+          <path d="M22 12C22 17 17 22 12 22s-10-5-10-10S2 7 2 12c0 5 4 10 10 10z" stroke-width="1.6"/>
+        </svg>
       </div>
-      <p class="meta" id="sourceNote"></p>
+      <h1 class="title">약 먹는 시간표</h1>
+      <p class="subtitle">약봉투 사진 한 장만 올려주세요.<br>회원가입·앱 설치 없이 바로 볼 수 있습니다.</p>
     </div>
-
-    <div id="errCard" style="display:none;"></div>
+    <div class="upload-card">
+      <button type="button" id="pick" class="upload-card-label" aria-label="약봉투 사진 올리기">
+        <span class="upload-card-label-inner">
+          <span class="upload-icon-wrap">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+              <path d="M16 19h-4a2 2 0 0 1-2-2v-1"/>
+            </svg>
+          </span>
+          <span>약봉투 사진 올리기</span>
+          <span class="upload-hint">카메라로 찍거나 사진첩에서 고르세요</span>
+        </span>
+      </button>
+      <input type="file" id="file" accept="image/*" class="upload-btn" aria-hidden="true">
+      <p class="preset-note">
+        <svg class="preset-note-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        사진을 고르면 바로 시간표를 만들어 드립니다
+      </p>
+    </div>
+    <div class="screen-only" id="status" style="display:none;">
+      <div class="status-card">
+        <div class="status-spinner" aria-hidden="true"></div>
+        <p class="status-text">지금 봉투 사진의 글씨를 읽고 있어요. <br>잠시만 기다려 주세요.</p>
+      </div>
+    </div>
+    <div class="result-card screen-only" id="resultCard" style="display:none;">
+      <div class="result-inner" id="result" role="region" aria-live="polite" aria-label="복약 시간표 결과"></div>
+      <div class="result-source" id="sourceNote"></div>
+      <div class="btn-row">
+        <button type="button" id="printBtn" class="btn-secondary">인쇄 / 저장</button>
+        <button type="button" id="resetBtn" class="btn-secondary">다른 봉투 보기</button>
+      </div>
+    </div>
+    <div class="screen-only" id="errCard" style="display:none;"></div>
   </div>
-
-<script>
-(function () {
-  var pick = document.getElementById("pick");
-  var file = document.getElementById("file");
-  var hint = document.getElementById("hint");
-  var status = document.getElementById("status");
-  var resultCard = document.getElementById("resultCard");
-  var result = document.getElementById("result");
-  var sourceNote = document.getElementById("sourceNote");
-  var errCard = document.getElementById("errCard");
-  var printBtn = document.getElementById("printBtn");
-  var resetBtn = document.getElementById("resetBtn");
-
-  function showErr(msg) {
-    errCard.style.display = "block";
-    errCard.innerHTML = '<div class="card"><p class="err">' + escapeHtml(msg) + '</p></div>';
-    resultCard.style.display = "none";
-    status.style.display = "none";
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
-    });
-  }
-
-  function hideAll() {
-    errCard.style.display = "none";
-    resultCard.style.display = "none";
-    status.style.display = "none";
-  }
-
-  pick.addEventListener("click", function () {
-    hideAll();
-    file.click();
-  });
-
-  file.addEventListener("change", function () {
-    var f = file.files && file.files[0];
-    if (!f) return;
-    hint.textContent = "사진: " + f.name;
-    status.style.display = "block";
-    resultCard.style.display = "none";
-    errCard.style.display = "none";
-
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      var dataUrl = e.target.result;
-      postSchedule(dataUrl);
-    };
-    reader.onerror = function () {
-      showErr("사진을 읽는 중 오류가 났습니다. 다시 골라 주세요.");
-    };
-    reader.readAsDataURL(f);
-  });
-
-  function postSchedule(dataUrl) {
-    fetch("/api/schedule", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image_b64: dataUrl })
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (json) {
-        status.style.display = "none";
-        if (json.error) {
-          showErr(json.error);
-          return;
-        }
-        result.textContent = json.schedule || "";
-        resultCard.style.display = "block";
-        sourceNote.textContent = "이 표는 약봉투에 적힌 내용을 옮긴 것입니다. 약 이름·용량이 맞는지 보호자가 확인해 주세요.";
-      })
-      .catch(function () {
-        status.style.display = "none";
-        showErr("시간표를 만드는 중 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.");
-      });
-  }
-
-  printBtn.addEventListener("click", function () {
-    window.print();
-  });
-
-  resetBtn.addEventListener("click", function () {
-    file.value = "";
-    hideAll();
-    hint.textContent = "사진을 고르면 바로 시간표를 만들어 드립니다.";
-    result.textContent = "";
-  });
-})();
-</script>
 </body>
 </html>
