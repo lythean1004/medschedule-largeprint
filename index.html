@@ -30,7 +30,7 @@
   html, body { height: 100%; }
 
   body {
-    font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
     background: var(--bg-warm);
     color: var(--ink-main);
     -webkit-font-smoothing: antialiased;
@@ -51,7 +51,6 @@
     padding: 8px 0 40px;
   }
 
-  /* 안심 배지 섹션 */
   .safety-badges {
     display: flex;
     flex-wrap: wrap;
@@ -77,7 +76,6 @@
 
   .badge-icon { width: 22px; height: 22px; flex-shrink: 0; }
 
-  /* 헤더 */
   .header { text-align: center; padding: 8px 0 4px; }
 
   .header-icon-wrap {
@@ -110,7 +108,6 @@
     margin: 0;
   }
 
-  /* 메인 카드 (CTA) */
   .upload-card {
     background: var(--bg-card);
     border-radius: 28px;
@@ -169,11 +166,11 @@
     color: var(--accent-text);
     font-weight: 600;
     opacity: 0.92;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   .preset-note {
-    margin-top: 18px;
+    margin-top: 20px;
     font-size: clamp(12pt, 2.2vw, 13.5pt);
     color: var(--ink-light);
     font-weight: 500;
@@ -186,7 +183,6 @@
 
   .preset-note-icon { width: 20px; height: 20px; color: var(--ink-light); flex-shrink: 0; }
 
-  /* 안내 상태 */
   .status-card {
     background: var(--bg-card);
     border-radius: 20px;
@@ -209,7 +205,6 @@
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* 결과 영역 */
   .result-card {
     background: var(--bg-card);
     border-radius: 24px;
@@ -231,7 +226,7 @@
   .result-inner h2 {
     font-size: clamp(26pt, 5.5vw, 32pt);
     font-weight: 800;
-    margin: 10px 0 4px;
+    margin: 16px 0 8px;
     letter-spacing: -0.02em;
   }
 
@@ -307,8 +302,9 @@
     .result-source { font-size: 11pt; color: #333; background: none; border: none; }
     .btn-secondary { display: none !important; }
     .preset-note { display: none !important; }
-    .result-inner::before { content: "약 먹는 시간표 — 출력본 (보호자 확인용)"; display: block; font-size: 12pt; color: #666; margin-bottom: 8px; font-weight: 600; }
+    .result-inner::before { content: "약 먹는 시간표 — 출력본 (보호자 확인용)"; display: block; font-size: 12pt; color: #666; margin-bottom: 8px; font-weight: 600;
   }
+</style>
 </style>
 </head>
 <body>
@@ -364,5 +360,95 @@
     </div>
     <div class="screen-only" id="errCard" style="display:none;"></div>
   </div>
+
+<script>
+(function () {
+  var pick = document.getElementById("pick");
+  var file = document.getElementById("file");
+  var hint = document.getElementById("hint");
+  var status = document.getElementById("status");
+  var resultCard = document.getElementById("resultCard");
+  var result = document.getElementById("result");
+  var sourceNote = document.getElementById("sourceNote");
+  var errCard = document.getElementById("errCard");
+  var printBtn = document.getElementById("printBtn");
+  var resetBtn = document.getElementById("resetBtn");
+
+  function showErr(msg) {
+    errCard.style.display = "block";
+    errCard.innerHTML = '<div class="error-card"><span class="error-card-icon">⚠</span>' + escapeHtml(msg) + '</div>';
+    resultCard.style.display = "none";
+    status.style.display = "none";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function hideAll() {
+    errCard.style.display = "none";
+    resultCard.style.display = "none";
+    status.style.display = "none";
+  }
+
+  pick.addEventListener("click", function () {
+    hideAll();
+    file.click();
+  });
+
+  file.addEventListener("change", function () {
+    var f = file.files && file.files[0];
+    if (!f) return;
+    status.style.display = "block";
+    resultCard.style.display = "none";
+    errCard.style.display = "none";
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      postSchedule(dataUrl);
+    };
+    reader.onerror = function () {
+      showErr("사진을 읽는 중 오류가 났습니다. 다시 골라 주세요.");
+    };
+    reader.readAsDataURL(f);
+  });
+
+  function postSchedule(dataUrl) {
+    fetch("/api/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_b64: dataUrl })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        status.style.display = "none";
+        if (json.error) {
+          showErr(json.error);
+          return;
+        }
+        result.textContent = json.schedule || "";
+        resultCard.style.display = "block";
+        sourceNote.textContent = "이 표는 약봉투에 적힌 내용을 옮긴 것입니다. 약 이름·용량이 맞는지 보호자가 확인해 주세요.";
+      })
+      .catch(function () {
+        status.style.display = "none";
+        showErr("시간표를 만드는 중 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.");
+      });
+  }
+
+  printBtn.addEventListener("click", function () {
+    window.print();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    file.value = "";
+    hideAll();
+    result.textContent = "";
+  });
+})();
+</script>
 </body>
 </html>
