@@ -1,8 +1,7 @@
 /**
- * /api/schedule  서버리스 함수
+ * C-2-3: /api/schedule  서버리스 함수
  * 클라이언트에서 올린 봉투 이미지를 Document OCR로 텍스트 추출 후,
- * Solar Pro 4(텍스트 전용)에 medicine-schedule-largeprint 규칙 프롬프트와 함께 넣어
- * 시간표로 재배치해 반환한다.
+ * Solar Pro 4(텍스트 전용)에 medicine-schedule-largeprint 규칙 프롬프트와 함께 넣어 시간표로 재배치해 반환한다.
  * 키·프록시 주소는 서버에만. 클라이언트는 같은 도메인 /api만 fetch.
  */
 
@@ -95,7 +94,7 @@ async function ocrText(buffer) {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error("OCR 오류 " + res.status + ": " + body.slice(0, 300));
+    throw new Error(`OCR 오류 ${res.status}: ${body.slice(0, 300)}`);
   }
   const json = await res.json();
   const text = json?.pages?.[0]?.text;
@@ -125,7 +124,7 @@ async function solarSchedule(text) {
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error("Solar 오류 " + res.status + ": " + txt.slice(0, 300));
+    throw new Error(`Solar 오류 ${res.status}: ${txt.slice(0, 300)}`);
   }
   const json = await res.json();
   const content = json?.choices?.[0]?.message?.content;
