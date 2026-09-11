@@ -315,6 +315,22 @@
     transform: scale(1.1);
   }
 
+  @media print {
+    @page { size: A4; margin: 15mm; }
+    body { background: #fff; color: #000; padding: 0; display: block; }
+    .page { max-width: none; margin: 0; padding: 0; }
+    .safety-badges, .upload-card, .btn-row, .status-card, .error-card { display: none !important; }
+    .header { text-align: left; padding: 0; }
+    .header-icon-wrap, .header-icon, .header-icon-svg, .header-sub-svg { display: none; }
+    .subtitle { color: #000; font-size: 16pt; }
+    h1.title { font-size: 26pt; }
+    .result-card { box-shadow: none; border: none; padding: 0; }
+    .result-inner { font-size: 20pt; line-height: 1.5; }
+    .result-inner h2 { font-size: 24pt; }
+    .result-source { font-size: 11pt; color: #333; background: none; border: none; }
+    .btn-secondary { display: none !important; }
+    .preset-note { display: none !important; }
+
   #reviewWorkspace {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -363,25 +379,9 @@
     }
   }
 
-  @media print {
-    @page { size: A4; margin: 15mm; }
-    body { background: #fff; color: #000; padding: 0; display: block; }
-    .page { max-width: none; margin: 0; padding: 0; }
-    .safety-badges, .upload-card, .btn-row, .status-card, .error-card { display: none !important; }
-    .header { text-align: left; padding: 0; }
-    .header-icon-wrap, .header-icon, .header-icon-svg, .header-sub-svg { display: none; }
-    .subtitle { color: #000; font-size: 16pt; }
-    h1.title { font-size: 26pt; }
-    .result-card { box-shadow: none; border: none; padding: 0; }
-    .result-inner { font-size: 20pt; line-height: 1.5; }
-    .result-inner h2 { font-size: 24pt; }
-    .result-source { font-size: 11pt; color: #333; background: none; border: none; }
-    .btn-secondary { display: none !important; }
-    .preset-note { display: none !important; }
-
-    #reviewWorkspace {
-      display: none !important;
-    }
+  #reviewWorkspace {
+    display: none !important;
+  }
 
     #draftCard {
       display: none !important;
@@ -392,6 +392,7 @@
     }
   }
 
+  /* 큰 터치 체크박스 */
   .touch-checkbox {
     appearance: none;
     -webkit-appearance: none;
@@ -448,26 +449,202 @@
     word-break: break-word;
   }
 
-  .missing-message {
-    color: #B91C1C;
-    font-size: 13pt;
+  .result-track {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    margin: 16px 0;
+    border-radius: 16px;
+  }
+
+  .result-track::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .result-track::-webkit-scrollbar-thumb {
+    background: #C5C9D0;
+    border-radius: 8px;
+  }
+
+  .result-track::-webkit-scrollbar-track {
+    background: #FAF8F5;
+    border-radius: 8px;
+  }
+
+  .result-cards {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 12px;
+    min-width: 100%;
+  }
+
+  .result-card-page {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    width: min(100%, 1000px);
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 24px 22px;
+    box-shadow: 0 10px 40px -12px rgba(26, 32, 44, 0.14);
+    border: 1px solid #E5E7EB;
+  }
+
+  .result-card-page-title {
+    font-size: 18pt;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: #1A202C;
+  }
+
+  .result-card-page-sub {
+    font-size: 15pt;
+    font-weight: 600;
+    color: #4A5568;
+    margin: 0 0 10px;
+  }
+
+  .result-card-page-empty {
+    font-size: 15pt;
     font-weight: 500;
-    margin-top: 4px;
+    color: #718096;
+    padding: 18px 0;
+    line-height: 1.5;
   }
 
-  .slots-missing {
-    color: #B91C1C;
-    font-size: 13pt;
-    font-weight: 600;
-    margin-top: 8px;
-    padding: 8px;
+  .result-card-page-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .confirm-missing {
-    color: #B91C1C;
-    font-size: 13pt;
+  .result-card-page-med {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid #E5E7EB;
+    padding-top: 12px;
+  }
+
+  .result-card-page-med-name {
+    font-size: 24pt;
+    font-weight: 800;
+    color: #1A202C;
+    line-height: 1.2;
+  }
+
+  .result-card-page-med-detailed {
+    font-size: 17pt;
     font-weight: 600;
-    margin-top: 6px;
+    color: #1A202C;
+    line-height: 1.45;
+  }
+
+  .result-card-page-med-detailed span {
+    color: #4A5568;
+  }
+
+  .result-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 12px;
+  }
+
+  .result-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 2px solid #1A202C;
+    background: #FFFFFF;
+    color: #1A202C;
+    font-size: 15pt;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    min-width: 48px;
+  }
+
+  .result-nav-btn:hover {
+    background: #F7F6F3;
+    border-color: #4A5568;
+  }
+
+  .result-nav-btn:focus-visible {
+    outline: 3px solid #2563EB;
+    outline-offset: 2px;
+  }
+
+  .result-nav-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #C5C9D0;
+  }
+
+  .result-nav-btn.hidden-mobile {
+    display: none;
+  }
+
+  .result-position {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1A202C;
+    text-align: center;
+    flex: 1 1 auto;
+    padding: 8px 12px;
+  }
+
+  .back-to-edit-btn {
+    min-height: 48px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .result-track {
+      scroll-behavior: auto;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .result-track {
+      overflow-x: visible;
+      scroll-snap-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .result-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 0;
+      min-width: 0;
+      flex-direction: column;
+    }
+
+    .result-card-page {
+      scroll-snap-align: start;
+      width: 100%;
+    }
+
+    .result-nav {
+      display: none;
+    }
+
+    .result-card-page-title {
+      font-size: 20pt;
+    }
+
+    .result-card-page-med-name {
+      font-size: 26pt;
+    }
+
+    .result-card-page-med-detailed {
+      font-size: 18pt;
+    }
   }
 </style>
 </head>
@@ -520,16 +697,28 @@
     </div>
 
     <div class="result-card screen-only" id="resultCard" style="display:none;">
-      <div class="result-inner" id="result" role="region" aria-live="polite" aria-label="복약 시간표 결과"></div>
-      <div class="result-source" id="sourceNote"></div>
+      <div id="confirmedStatus" style="margin-top:16px; color:#1A202C; font-size:16pt; font-weight:700;"></div>
+
+      <div id="resultTrack" class="result-track">
+        <div id="resultCards" class="result-cards"></div>
+      </div>
+
+      <div id="resultNav" class="result-nav" style="display:none;">
+        <button type="button" id="resultPrevBtn" class="result-nav-btn">이전</button>
+        <span id="resultPosition" style="flex:1 1 auto; text-align:center; font-size:16pt; font-weight:700; padding:8px 12px;">1 / 4</span>
+        <button type="button" id="resultNextBtn" class="result-nav-btn">다음</button>
+      </div>
+
       <div class="btn-row">
-        <button type="button" id="printBtn" class="btn-secondary">인쇄 / 저장</button>
+        <button type="button" id="backToEditBtn" class="btn-secondary">내용 다시 수정</button>
+        <button type="button" id="previewBtn" class="btn-secondary" disabled>큰 글씨 시간표 보기</button>
+        <button type="button" id="printBtn" class="btn-secondary" disabled>인쇄 / 저장</button>
       </div>
     </div>
 
     <div class="screen-only" id="errCard" style="display:none;"></div>
 
-    <div id="reviewWorkspace">
+<div id="reviewWorkspace">
 <section id="sourceCard"
          class="result-card"
          aria-labelledby="sourceTitle"
@@ -575,7 +764,9 @@
     <button type="button" id="resetBtn" class="btn-secondary">다른 봉투 보기</button>
   </div>
 </section>
-    </div>
+</div>
+
+  </div>
 
 <script>
 (function () {
@@ -872,6 +1063,145 @@
     }
   }
 
+  function buildConfirmedSchedule(reviewState) {
+    if (!reviewState || !reviewState.medications || reviewState.medications.length === 0) {
+      return null;
+    }
+
+    var medications = reviewState.medications.filter(function (medication) {
+      return medication.confirmed === true;
+    });
+
+    if (medications.length === 0) {
+      return null;
+    }
+
+    var morning = [];
+    var noon = [];
+    var evening = [];
+    var others = [];
+
+    medications.forEach(function (medication) {
+      var m = {
+        id: medication.id,
+        reviewId: medication.reviewId,
+        name: medication.values.name || "",
+        dose: medication.values.dose || "",
+        frequency: medication.values.frequency || "",
+        timing: medication.values.timing || "",
+        duration: medication.values.duration || "",
+        scheduleType: medication.scheduleType,
+        timeSlots: medication.timeSlots.slice(),
+        timingSource: medication.timingSource
+      };
+
+      if (medication.scheduleType === "unresolved") {
+        others.push(m);
+        return;
+      }
+
+      if (medication.scheduleType === "as_needed") {
+        others.push(m);
+        return;
+      }
+
+      if (medication.scheduleType === "non_daily") {
+        others.push(m);
+        return;
+      }
+
+      if (medication.scheduleType === "daily") {
+        if (medication.timeSlots.length === 0) {
+          return;
+        }
+
+        medication.timeSlots.forEach(function (slot) {
+          if (slot === "morning") {
+            morning.push(m);
+          } else if (slot === "noon") {
+            noon.push(m);
+          } else if (slot === "evening") {
+            evening.push(m);
+          } else {
+            others.push(m);
+          }
+        });
+      }
+    });
+
+    return {
+      morning: morning,
+      noon: noon,
+      evening: evening,
+      others: others,
+      reviewState: reviewState
+    };
+  }
+
+  function canShowConfirmedSchedule() {
+    if (!reviewState || !reviewState.medications || reviewState.medications.length === 0) {
+      return false;
+    }
+
+    for (var i = 0; i < reviewState.medications.length; i++) {
+      var medication = reviewState.medications[i];
+      if (medication.confirmed !== true) {
+        return false;
+      }
+    }
+
+    if (reviewState.documentConfirmed !== true) {
+      return false;
+    }
+
+    for (var j = 0; j < reviewState.medications.length; j++) {
+      var missing = medicationMissingItems(reviewState.medications[j]);
+      if (missing.length > 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function refreshConfirmedPreview() {
+    var status = document.getElementById("confirmedStatus");
+    var previewBtn = document.getElementById("previewBtn");
+    var printBtn = document.getElementById("printBtn");
+
+    if (!status || !previewBtn || !printBtn) {
+      return;
+    }
+
+    if (!reviewState || !reviewState.medications || reviewState.medications.length === 0) {
+      status.textContent = "약별 초안이 없습니다.";
+      previewBtn.disabled = true;
+      printBtn.disabled = true;
+      return;
+    }
+
+    var confirmed = reviewState.medications.filter(function (medication) {
+      return medication.confirmed === true;
+    }).length;
+
+    var ready = confirmed === reviewState.medications.length &&
+      reviewState.documentConfirmed === true &&
+      canShowConfirmedSchedule();
+
+    if (!ready) {
+      status.textContent = "약 " + reviewState.medications.length + "개 중 " + confirmed + "개 대조 완료. 누락이 없고 전체 확인까지 마쳐야 시간표를 볼 수 있습니다.";
+      previewBtn.disabled = true;
+      printBtn.disabled = true;
+      return;
+    }
+
+    status.textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
+    previewBtn.disabled = false;
+    printBtn.disabled = false;
+
+    updateResultNav();
+  }
+
   function updateDocumentReview() {
     var box = document.getElementById("documentConfirm");
     var message = document.getElementById("documentReviewStatus");
@@ -903,6 +1233,274 @@
         (ready
           ? "누락된 약과 문서 확인 사항까지 검토한 뒤 전체 확인을 선택해 주세요."
           : "각 약의 대조 확인을 먼저 완료해 주세요.");
+  }
+
+  function renderConfirmedSchedule(schedule) {
+    if (!schedule) {
+      return;
+    }
+
+    var result = document.getElementById("result");
+    if (!result) {
+      return;
+    }
+
+    var parts = [];
+
+    if (schedule.morning.length > 0) {
+      parts.push("## 아침");
+      schedule.morning.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    if (schedule.noon.length > 0) {
+      parts.push("## 점심");
+      schedule.noon.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    if (schedule.evening.length > 0) {
+      parts.push("## 저녁");
+      schedule.evening.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    var other = schedule.others.filter(function (m) {
+      return m.scheduleType === "bedtime" || m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved";
+    });
+
+    var bedtime = other.filter(function (m) {
+      return m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1;
+    });
+    var asNeeded = other.filter(function (m) {
+      return m.scheduleType === "as_needed";
+    });
+    var nonDaily = other.filter(function (m) {
+      return m.scheduleType === "non_daily";
+    });
+    var unresolved = other.filter(function (m) {
+      return m.scheduleType === "unresolved";
+    });
+
+    if (bedtime.length > 0) {
+      parts.push("## 자기 전");
+      bedtime.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    if (asNeeded.length > 0) {
+      parts.push("## 필요할 때만 먹는 약");
+      asNeeded.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    if (nonDaily.length > 0) {
+      parts.push("## 매일 먹지 않는 약");
+      nonDaily.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    if (unresolved.length > 0) {
+      parts.push("## 복용 유형 확인 필요");
+      unresolved.forEach(function (m) {
+        parts.push(m.name + " / " + m.dose + " / " + m.timing + " / " + m.frequency + " / " + m.duration);
+      });
+      parts.push("");
+    }
+
+    var pages = [];
+
+    function addPage(title, sub, meds, emptyText) {
+      var page = document.createElement("div");
+      page.className = "result-card-page";
+      page.setAttribute("role", "region");
+
+      var titleEl = document.createElement("h3");
+      titleEl.className = "result-card-page-title";
+      titleEl.textContent = title;
+      page.appendChild(titleEl);
+
+      if (sub) {
+        var subEl = document.createElement("p");
+        subEl.className = "result-card-page-sub";
+        subEl.textContent = sub;
+        page.appendChild(subEl);
+      }
+
+      var listEl = document.createElement("div");
+      listEl.className = "result-card-page-list";
+
+      if (!meds || meds.length === 0) {
+        var emptyEl = document.createElement("p");
+        emptyEl.className = "result-card-page-empty";
+        emptyEl.textContent = emptyText || "확인한 시간표에 등록된 약이 없습니다";
+        listEl.appendChild(emptyEl);
+      } else {
+        meds.forEach(function (m) {
+          var item = document.createElement("div");
+          item.className = "result-card-page-med";
+
+          var nameEl = document.createElement("div");
+          nameEl.className = "result-card-page-med-name";
+          nameEl.textContent = m.name;
+          item.appendChild(nameEl);
+
+          var detailed = [];
+          if (m.dose) detailed.push("<span>1회량: </span>" + m.dose);
+          if (m.timing) detailed.push("<span>복용 조건: </span>" + m.timing);
+          if (m.frequency) detailed.push("<span>복용 횟수: </span>" + m.frequency);
+          if (m.duration) detailed.push("<span>며칠분: </span>" + m.duration);
+
+          if (detailed.length > 0) {
+            var detailedEl = document.createElement("div");
+            detailedEl.className = "result-card-page-med-detailed";
+            detailedEl.innerHTML = detailed.join("  ·  ");
+            item.appendChild(detailedEl);
+          }
+
+          listEl.appendChild(item);
+        });
+      }
+
+      page.appendChild(listEl);
+      pages.push(page);
+    }
+
+    addPage("아침", null, schedule.morning, "확인한 시간표에 등록된 약이 없습니다");
+    addPage("점심", null, schedule.noon, "확인한 시간표에 등록된 약이 없습니다");
+    addPage("저녁", null, schedule.evening, "확인한 시간표에 등록된 약이 없습니다");
+
+    var others = schedule.others.filter(function (m) {
+      return m.scheduleType === "bedtime" || m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved";
+    });
+
+    var bedtime = others.filter(function (m) {
+      return m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1;
+    });
+    var asNeeded = others.filter(function (m) {
+      return m.scheduleType === "as_needed";
+    });
+    var nonDaily = others.filter(function (m) {
+      return m.scheduleType === "non_daily";
+    });
+    var unresolved = others.filter(function (m) {
+      return m.scheduleType === "unresolved";
+    });
+
+    addPage("자기 전", "복용 시점을 확인한 약", bedtime, "확인한 시간대(자기 전)의 약이 없습니다");
+    addPage("필요할 때만 먹는 약", "필요할 때만 복용하는 약", asNeeded, "필요할 때만 먹는 약이 없습니다");
+    addPage("매일 먹지 않는 약", "매일 먹지 않는 약", nonDaily, "매일 먹지 않는 약이 없습니다");
+    addPage("복용 유형 확인 필요", "복용 유형 확인이 필요한 약", unresolved, "복용 유형 확인이 필요한 약이 없습니다");
+
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    resultCards.replaceChildren();
+    pages.forEach(function (page) {
+      resultCards.appendChild(page);
+    });
+
+    var totalPages = pages.length;
+    var resultTrack = document.getElementById("resultTrack");
+    if (resultTrack) {
+      resultTrack.style.display = totalPages > 1 ? "block" : "none";
+    }
+
+    var resultNav = document.getElementById("resultNav");
+    if (resultNav) {
+      resultNav.style.display = totalPages > 1 ? "flex" : "none";
+    }
+
+    if (totalPages > 0) {
+      scrollToResultPage(1, totalPages);
+    }
+
+    document.getElementById("resultCard").style.display = "block";
+    document.getElementById("confirmedStatus").textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
+  }
+
+  function scrollToResultPage(index, total) {
+    if (!index || !total || index < 1 || index > total) {
+      return;
+    }
+
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+
+    var pageEl = null;
+    if (resultCards) {
+      var children = resultCards.children;
+      if (children[index - 1]) {
+        pageEl = children[index - 1];
+      }
+    }
+
+    if (resultTrack && pageEl) {
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        resultTrack.scrollLeft = pageEl.offsetLeft - resultTrack.clientWidth / 2 + pageEl.clientWidth / 2;
+      } else {
+        resultTrack.scrollTo({
+          left: pageEl.offsetLeft - resultTrack.clientWidth / 2 + pageEl.clientWidth / 2,
+          behavior: "smooth"
+        });
+      }
+    }
+
+    var positionEl = document.getElementById("resultPosition");
+    if (positionEl) {
+      positionEl.textContent = index + " / " + total;
+    }
+
+    var prevBtn = document.getElementById("resultPrevBtn");
+    var nextBtn = document.getElementById("resultNextBtn");
+    if (prevBtn) {
+      prevBtn.disabled = index <= 1;
+    }
+    if (nextBtn) {
+      nextBtn.disabled = index >= total;
+    }
+  }
+
+  function updateResultNav() {
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+
+    if (!resultTrack || !resultCards) {
+      return;
+    }
+
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+
+    var resultTrackRect = resultTrack.getBoundingClientRect();
+    var currentLeft = resultTrack.scrollLeft + resultTrackRect.width / 2;
+
+    var bestIndex = 1;
+    for (var i = 0; i < total; i++) {
+      var child = children[i];
+      var childCenter = child.offsetLeft + child.offsetWidth / 2;
+      if (Math.abs(childCenter - currentLeft) < Math.abs((children[bestIndex] ? children[bestIndex].offsetLeft + children[bestIndex].offsetWidth / 2 : 0) - currentLeft)) {
+        bestIndex = i + 1;
+      }
+    }
+
+    scrollToResultPage(bestIndex, total);
   }
 
   function renderMedicationDraft(draft) {
@@ -1127,6 +1725,7 @@
           updateDocumentReview();
 
           refreshArticleMissingForCurrentDraft();
+          refreshConfirmedPreview();
 
           var sourceControl =
             article.querySelector(".medication-timing-source");
@@ -1248,9 +1847,9 @@
 
             updateDocumentReview();
 
-            refreshArticleMissingForCurrentDraft();
-
             nextReviewState.documentConfirmed = false;
+
+            refreshArticleMissing(article, medication);
 
             timeEl.textContent = "시간대: " + (
               medication.timeSlots.length
@@ -1325,6 +1924,7 @@
           updateDocumentReview();
 
           refreshArticleMissingForCurrentDraft();
+          refreshConfirmedPreview();
 
           nextReviewState.documentConfirmed = false;
         });
@@ -1333,6 +1933,7 @@
         sourceHint.textContent =
           "이 약의 복용 시점·조건과 선택한 시간대를 확인한 경우에만 고르세요. AI가 읽은 근거만 보고 확인 완료로 선택하지 마세요.";
         sourceHint.style.marginTop = "8px";
+
         article.appendChild(sourceLabel);
         article.appendChild(sourceSelect);
         article.appendChild(sourceHint);
@@ -1370,7 +1971,6 @@
             medication.confirmed = false;
             confirmNotice.textContent = "확인을 해제했습니다.";
             updateDocumentReview();
-            refreshArticleMissingForCurrentDraft();
             return;
           }
 
@@ -1379,232 +1979,288 @@
           [
             ["name", "약 이름"],
             ["dose", "1회 먹는 양"],
-            ["timing", "복용 시점·조건"]
-          ].forEach(function (item) {
-            var value = medication.values[item[0]];
-            if (typeof value !== "string" || !value.trim()) {
-              missing.push(item[1]);
+            ["frequency", "복용 횟수"],
+            ["timing", "복용 시점"],
+            ["duration", "며칠분"]
+          ].forEach(function (entry) {
+            var field = med[entry[0]];
+            if (
+              !field ||
+              !["found", "unresolved"].includes(field.status) ||
+              (field.value !== null && typeof field.value !== "string") ||
+              (field.evidence !== null && typeof field.evidence !== "string") ||
+              (field.status === "found" &&
+                (!field.value || !field.value.trim() ||
+                 !field.evidence || !field.evidence.trim()))
+            ) {
+              throw new Error("invalid field");
+            }
+
+            var missingItem = field.status === "found"
+              ? field.value
+              : null;
+
+            if (!missingItem || !missingItem.trim()) {
+              missing.push(entry[1] + "를(을) 확인하지 못했습니다.");
             }
           });
-
-          if (!["daily", "as_needed", "non_daily"].includes(
-            medication.scheduleType
-          )) {
-            missing.push("복용 유형");
-          }
-
-          if (medication.scheduleType === "daily") {
-            var frequency = medication.values.frequency;
-            if (typeof frequency !== "string" || !frequency.trim()) {
-              missing.push("복용 횟수");
-            }
-            if (medication.timeSlots.length === 0) {
-              missing.push("복용 시간대");
-            }
-          } else if (medication.timeSlots.length > 0) {
-            missing.push("일반 시간대 선택 해제");
-          }
-
-          if (!["original", "pharmacist"].includes(
-            medication.timingSource
-          )) {
-            missing.push("복용 시점·시간대 확인 근거");
-          }
 
           if (missing.length > 0) {
             confirmBox.checked = false;
             medication.confirmed = false;
-            confirmNotice.textContent =
-              "먼저 확인해 주세요: " + missing.join(", ");
+            confirmNotice.textContent = "확인하지 못한 내용이 있습니다: " + missing.join("; ");
             updateDocumentReview();
-            refreshArticleMissingForCurrentDraft();
+            return;
+          }
+
+          var emptySlots = [];
+          if (medication.scheduleType === "daily") {
+            var slotNames = {
+              morning: "아침",
+              noon: "점심",
+              evening: "저녁",
+              bedtime: "자기 전"
+            };
+            medication.timeSlots.forEach(function (slot) {
+              if (!slotNames[slot]) {
+                emptySlots.push(slot);
+              }
+            });
+          }
+
+          if (emptySlots.length > 0) {
+            confirmBox.checked = false;
+            medication.confirmed = false;
+            confirmNotice.textContent = "확인되지 않은 시간대가 있습니다.";
+            updateDocumentReview();
+            return;
+          }
+
+          if (medication.timingSource !== "original" && medication.timingSource !== "pharmacist") {
+            confirmBox.checked = false;
+            medication.confirmed = false;
+            confirmNotice.textContent = "복용 시점·시간대 확인 근거가 선택되지 않았습니다.";
+            updateDocumentReview();
             return;
           }
 
           medication.confirmed = true;
-          confirmNotice.textContent =
-            "사용자가 대조했음을 표시했습니다. 내용을 수정하면 확인이 해제됩니다.";
-
+          confirmNotice.textContent = "확인 완료.";
           updateDocumentReview();
           refreshArticleMissingForCurrentDraft();
         });
 
-        confirmLabel.appendChild(confirmBox);
-        confirmLabel.appendChild(confirmSpan);
         article.appendChild(confirmLabel);
+        article.appendChild(confirmBox);
+        article.appendChild(confirmSpan);
         article.appendChild(confirmNotice);
+
         fragment.appendChild(article);
       });
 
-      var issueFragment = document.createDocumentFragment();
-      draft.document_issues.forEach(function (issue) {
-        if (typeof issue !== "string") {
-          throw new Error("invalid issue");
-        }
-        var p = document.createElement("p");
-        p.textContent = "확인 사항: " + issue;
-        issueFragment.appendChild(p);
-      });
+      card.appendChild(fragment);
+      card.style.display = "block";
+      list.replaceChildren();
+      issues.replaceChildren();
+      resultCard.style.display = "none";
 
-      list.appendChild(fragment);
-      issues.appendChild(issueFragment);
       reviewState = nextReviewState;
       refreshArticleMissingForCurrentDraft();
+      refreshConfirmedPreview();
       updateDocumentReview();
       card.style.fontSize = "20px";
       card.style.lineHeight = "1.6";
       errCard.style.display = "none";
       status.style.display = "none";
-      card.style.display = "block";
-    } catch (error) {
-      reviewState = null;
+
+    } catch (err) {
+      card.style.display = "none";
       list.replaceChildren();
       issues.replaceChildren();
-      card.style.display = "none";
-      showErr("약별 초안 형식을 확인하지 못했습니다.");
+      resultCard.style.display = "none";
+
+      var errorBox = document.createElement("div");
+      errorBox.className = "error-card";
+      errorBox.setAttribute("role", "alert");
+      errorBox.textContent = "약별 초안을 확인하지 못했습니다. 다시 시도해 주세요.";
+
+      errCard.replaceChildren(errorBox);
+      errCard.style.display = "block";
+      status.style.display = "none";
+      reviewState = null;
     }
-  }
-
-  function postSchedule(dataUrl) {
-    return (
-      fetch("/api/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_b64: dataUrl })
-      })
-        .then(function (r) {
-          if (!r.ok) {
-            throw new Error("초안 요청 실패");
-          }
-          return r.json();
-        })
-        .then(function (json) {
-          status.style.display = "none";
-
-          if (!json || typeof json !== "object" || Array.isArray(json)) {
-            showErr("약별 초안 응답을 확인하지 못했습니다.");
-            return;
-          }
-
-          if (json.error) {
-            showErr("약별 초안을 만들지 못했습니다. 다시 시도해 주세요.");
-            return;
-          }
-
-          if (!json.draft) {
-            showErr("약별 초안이 없습니다. 다시 시도해 주세요.");
-            return;
-          }
-
-          result.textContent = "";
-          sourceNote.textContent = "";
-          renderMedicationDraft(json.draft);
-        })
-        .catch(function () {
-          status.style.display = "none";
-          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
-        })
-    );
   }
 
   pick.addEventListener("click", function () {
     if (isProcessing) return;
-    file.value = "";
     file.click();
   });
 
   file.addEventListener("change", function () {
-    if (isProcessing) return;
-
-    var f = file.files && file.files[0];
-    if (!f) return;
-
-    setProcessing(true);
-    clearSourceImage();
-    clearMedicationDraft();
-    hideAll();
-    result.textContent = "";
-    sourceNote.textContent = "";
-    status.style.display = "block";
+    if (!file.files || file.files.length === 0) return;
 
     var reader = new FileReader();
 
-    reader.onload = function (e) {
-      Promise.resolve()
-        .then(function () {
-          showSourceImage(e.target.result);
-          return postSchedule(e.target.result);
-        })
-        .catch(function () {
-          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
-        })
-        .finally(function () {
-          setProcessing(false);
-        });
+    setProcessing(true);
+    status.style.display = "block";
+    errCard.style.display = "none";
+    resultCard.style.display = "none";
+    resultCard.querySelector("#result").textContent = "";
+
+    reader.onload = function () {
+      var dataUrl = reader.result;
+
+      setProcessing(false);
+      status.style.display = "none";
+      errCard.style.display = "none";
+
+      if (!dataUrl) {
+        showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
+        return;
+      }
+
+      showSourceImage(dataUrl);
+      postSchedule(dataUrl);
     };
 
     reader.onerror = function () {
-      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
       setProcessing(false);
+      status.style.display = "none";
+      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
     };
 
-    reader.onabort = function () {
-      showErr("사진 읽기가 취소됐습니다.");
-      setProcessing(false);
-    };
+    reader.readAsDataURL(file.files[0]);
+  });
 
-    try {
-      reader.readAsDataURL(f);
-    } catch (error) {
-      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
-      setProcessing(false);
+  resetBtn.addEventListener("click", function () {
+    if (isProcessing) return;
+
+    clearSourceImage();
+    file.value = "";
+    hideAll();
+    refreshConfirmedPreview();
+    resultCard.querySelector("#result").textContent = "";
+    document.getElementById("sourceNote").textContent = "";
+
+    resultCard.style.display = "none";
+    resultTrack.style.display = "none";
+    resultNav.style.display = "none";
+    confirmedStatus.textContent = "";
+    document.getElementById("resultCards").replaceChildren();
+    draftCard.style.display = "block";
+  });
+
+  document.getElementById("sourcePrevBtn").addEventListener("click", function () {
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+    if (!resultTrack || !resultCards) {
+      return;
     }
+    var children = resultCards.children;
+    var total = children.length;
+    for (var i = 0; i < total; i++) {
+      var child = children[i];
+      var childCenter = child.offsetLeft + child.offsetWidth / 2;
+      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
+      if (childCenter < currentLeft) {
+        scrollToResultPage(i + 1, total);
+        return;
+      }
+    }
+    scrollToResultPage(1, total);
+  });
+
+  document.getElementById("sourceNextBtn").addEventListener("click", function () {
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+    if (!resultTrack || !resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    for (var i = 0; i < total; i++) {
+      var child = children[i];
+      var childCenter = child.offsetLeft + child.offsetWidth / 2;
+      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
+      if (childCenter > currentLeft) {
+        scrollToResultPage(i + 2, total);
+        return;
+      }
+    }
+    scrollToResultPage(total, total);
+  });
+
+  previewBtn.addEventListener("click", function () {
+    if (!canShowConfirmedSchedule()) {
+      showErr("아직 큰 글씨 시간표를 볼 수 없습니다.");
+      return;
+    }
+
+    var schedule = buildConfirmedSchedule(reviewState);
+    if (!schedule) {
+      showErr("큰 글씨 시간표를 준비하지 못했습니다.");
+      return;
+    }
+
+    renderConfirmedSchedule(schedule);
   });
 
   printBtn.addEventListener("click", function () {
     window.print();
   });
 
-  resetBtn.addEventListener("click", function () {
-    if (isProcessing) return;
-    clearSourceImage();
-    file.value = "";
-    hideAll();
-    result.textContent = "";
-    sourceNote.textContent = "";
+  backToEditBtn.addEventListener("click", function () {
+    resultCard.style.display = "none";
+    resultTrack.style.display = "none";
+    resultNav.style.display = "none";
+    confirmedStatus.textContent = "";
+    document.getElementById("resultCards").replaceChildren();
+    draftCard.style.display = "block";
   });
 
-  document.getElementById("sourceZoomBtn")
-    .addEventListener("click", function () {
-      var viewport = document.getElementById("sourceViewport");
-      var expanded = viewport.classList.toggle("is-zoomed");
-      this.textContent = expanded ? "사진 크기 되돌리기" : "사진 크게 보기";
-      this.setAttribute("aria-expanded", String(expanded));
-
-      if (!expanded) {
-        viewport.scrollTop = 0;
-        viewport.scrollLeft = 0;
-      }
-
-      viewport.focus();
-    });
-
-  document.getElementById("documentConfirm")
-    .addEventListener("change", function () {
-      if (!reviewState) {
-        updateDocumentReview();
+  document.getElementById("resultPrevBtn").addEventListener("click", function () {
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+    if (!resultTrack || !resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    for (var i = 0; i < total; i++) {
+      var child = children[i];
+      var childCenter = child.offsetLeft + child.offsetWidth / 2;
+      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
+      if (childCenter < currentLeft) {
+        scrollToResultPage(i + 1, total);
         return;
       }
+    }
+    scrollToResultPage(1, total);
+  });
 
-      var ready = reviewState.medications.length > 0 &&
-        reviewState.medications.every(function (medication) {
-          return medication.confirmed === true;
-        });
+  document.getElementById("resultNextBtn").addEventListener("click", function () {
+    var resultTrack = document.getElementById("resultTrack");
+    var resultCards = document.getElementById("resultCards");
+    if (!resultTrack || !resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    for (var i = 0; i < total; i++) {
+      var child = children[i];
+      var childCenter = child.offsetLeft + child.offsetWidth / 2;
+      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
+      if (childCenter > currentLeft) {
+        scrollToResultPage(i + 2, total);
+        return;
+      }
+    }
+    scrollToResultPage(total, total);
+  });
 
-      reviewState.documentConfirmed = ready && this.checked;
-      updateDocumentReview();
-      refreshArticleMissingForCurrentDraft();
-    });
+  window.addEventListener("resize", function () {
+    updateResultNav();
+  });
 })();
 </script>
 </body>
