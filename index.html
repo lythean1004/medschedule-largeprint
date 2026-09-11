@@ -391,6 +391,84 @@
       display: none !important;
     }
   }
+
+  .touch-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    vertical-align: middle;
+    border: 2px solid #1A202C;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .touch-checkbox:checked {
+    background: #2563EB;
+    border-color: #2563EB;
+  }
+
+  .touch-checkbox:checked::after {
+    content: "\2713";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 700;
+  }
+
+  .touch-checkbox:focus-visible {
+    outline: 3px solid #2563EB;
+    outline-offset: 2px;
+  }
+
+  .touch-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 48px;
+    padding: 12px;
+    line-height: 1.5;
+    cursor: pointer;
+  }
+
+  .touch-checkbox-label > input.touch-checkbox {
+    margin-top: 4px;
+  }
+
+  .touch-checkbox-label > span {
+    flex: 1 1 auto;
+    word-break: break-word;
+  }
+
+  .missing-message {
+    color: #B91C1C;
+    font-size: 13pt;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  .slots-missing {
+    color: #B91C1C;
+    font-size: 13pt;
+    font-weight: 600;
+    margin-top: 8px;
+    padding: 8px;
+  }
+
+  .confirm-missing {
+    color: #B91C1C;
+    font-size: 13pt;
+    font-weight: 600;
+    margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -446,7 +524,6 @@
       <div class="result-source" id="sourceNote"></div>
       <div class="btn-row">
         <button type="button" id="printBtn" class="btn-secondary">인쇄 / 저장</button>
-        <button type="button" id="resetBtn" class="btn-secondary">다른 봉투 보기</button>
       </div>
     </div>
 
@@ -485,13 +562,17 @@
   <div id="draftIssues"></div>
 
   <div id="documentReview" style="margin-top:24px;">
-    <label style="display:block; padding:12px;">
-      <input type="checkbox" id="documentConfirm" disabled>
-      원본의 약 목록과 대조해 빠진 약이 없는지 살폈고,
-      각 약의 내용과 문서 확인 사항까지 검토했습니다.
+    <label class="touch-checkbox-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px;">
+      <input type="checkbox" id="documentConfirm" disabled class="touch-checkbox">
+      <span>원본의 약 목록과 대조해 빠진 약이 없는지 살폈고,
+      각 약의 내용과 문서 확인 사항까지 검토했습니다.</span>
     </label>
     <p id="documentReviewStatus" aria-live="polite"></p>
     <p>현재는 원본 대조·수정 단계입니다. 최종 시간표 인쇄는 준비 중입니다.</p>
+  </div>
+
+  <div style="margin-top:20px;">
+    <button type="button" id="resetBtn" class="btn-secondary">다른 봉투 보기</button>
   </div>
 </section>
     </div>
@@ -589,7 +670,7 @@
         values: values,
         scheduleType: med.schedule_type,
         timeSlots: med.time_slots.slice(),
-        timingSource: null,
+        timingSource: "original",
         confirmed: false
       };
     });
@@ -599,6 +680,196 @@
       medications: medications,
       documentConfirmed: false
     };
+  }
+
+  function fieldMissing(medication, key) {
+    var value = medication.values[key];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return true;
+    }
+    return false;
+  }
+
+  function medicationMissingItems(medication) {
+    var missing = [];
+
+    if (fieldMissing(medication, "name")) {
+      missing.push({ id: "name-" + medication.reviewId, text: "약 이름을 원본에서 확인해 주세요." });
+    }
+    if (fieldMissing(medication, "dose")) {
+      missing.push({ id: "dose-" + medication.reviewId, text: "1회 먹는 양을 원본에서 확인해 주세요." });
+    }
+    if (fieldMissing(medication, "timing")) {
+      missing.push({ id: "timing-" + medication.reviewId, text: "복용 시점·조건을 원본에서 확인해 주세요." });
+    }
+
+    if (medication.scheduleType === "unresolved") {
+      missing.push({ id: "type-" + medication.reviewId, text: "복용 유형을 선택해 주세요." });
+    }
+
+    if (medication.timingSource !== "original" && medication.timingSource !== "pharmacist") {
+      missing.push({ id: "timing-source-" + medication.reviewId, text: "복용 시점·시간대 확인 근거를 선택해 주세요." });
+    }
+
+    if (medication.scheduleType === "daily") {
+      if (fieldMissing(medication, "frequency")) {
+        missing.push({ id: "frequency-" + medication.reviewId, text: "복용 횟수를 원본에서 확인해 주세요." });
+      }
+      if (medication.timeSlots.length === 0) {
+        missing.push({ id: "slots-" + medication.reviewId, text: "원본이나 약사에게 확인한 시간대를 선택해 주세요." });
+      }
+    }
+
+    if (medication.values.duration && medication.values.duration.trim().length === 0) {
+      missing.push({ id: "duration-" + medication.reviewId, text: "며칠분이 비어 있습니다. 확인되지 않았으면 추측해서 입력하지 마세요." });
+    }
+
+    return missing;
+  }
+
+  function refreshArticleMissing(article, medication) {
+    if (!article || !medication) return;
+
+    var missing = medicationMissingItems(medication);
+
+    missing.forEach(function (item) {
+      var input = article.querySelector('[id="' + item.id + '"]');
+      if (!input) return;
+
+      var row = input.parentElement;
+      if (row && row.nodeName === "P") {
+        var existing = row.querySelector(".missing-message");
+        if (item.text) {
+          if (!existing) {
+            existing = document.createElement("p");
+            existing.className = "missing-message";
+            existing.style.color = "#B91C1C";
+            existing.style.fontSize = "13pt";
+            existing.style.fontWeight = "500";
+            existing.style.marginTop = "4px";
+            row.appendChild(existing);
+          }
+          existing.textContent = item.text;
+          input.setAttribute("aria-invalid", "true");
+          var describedBy = input.getAttribute("aria-describedby");
+          if (describedBy) {
+            input.setAttribute("aria-describedby", describedBy + " missing-message");
+          } else {
+            input.setAttribute("aria-describedby", "missing-message");
+          }
+          row.style.background = "#FEF2F2";
+          row.style.borderRadius = "8px";
+        } else {
+          if (existing) {
+            existing.remove();
+          }
+          input.removeAttribute("aria-invalid");
+          input.removeAttribute("aria-describedby");
+          row.style.background = "";
+        }
+      }
+    });
+
+    var slotGroup = article.querySelector(".medication-slots");
+    if (slotGroup) {
+      var slotMissing = medication.scheduleType === "daily" && medication.timeSlots.length === 0;
+      var existing = slotGroup.querySelector(".slots-missing");
+      if (slotMissing) {
+        if (!existing) {
+          existing = document.createElement("p");
+          existing.className = "slots-missing";
+          existing.style.color = "#B91C1C";
+          existing.style.fontSize = "13pt";
+          existing.style.fontWeight = "600";
+          existing.style.marginTop = "8px";
+          existing.style.padding = "8px";
+          slotGroup.appendChild(existing);
+        }
+        existing.textContent = "원본이나 약사에게 확인한 시간대를 선택해 주세요.";
+        slotGroup.style.background = "#FEF2F2";
+        slotGroup.style.border = "1.5px solid #B91C1C";
+        slotGroup.style.borderRadius = "12px";
+      } else {
+        if (existing) {
+          existing.remove();
+        }
+        slotGroup.style.background = "";
+        slotGroup.style.border = "";
+        slotGroup.style.borderRadius = "";
+      }
+    }
+
+    var confirmLabel = article.querySelector(".touch-checkbox-label");
+    if (confirmLabel) {
+      var confirmMissing = medicationMissingItems(medication).length > 0;
+      var existing = confirmLabel.querySelector(".confirm-missing");
+      if (confirmMissing) {
+        if (!existing) {
+          existing = document.createElement("p");
+          existing.className = "confirm-missing";
+          existing.style.color = "#B91C1C";
+          existing.style.fontSize = "13pt";
+          existing.style.fontWeight = "600";
+          existing.style.marginTop = "6px";
+          confirmLabel.appendChild(existing);
+        }
+        existing.textContent = "원본과 대조한 뒤 체크해 주세요.";
+        confirmLabel.style.border = "2px solid #B91C1C";
+        confirmLabel.style.background = "#FEF2F2";
+        confirmLabel.style.borderRadius = "10px";
+      } else {
+        if (existing) {
+          existing.remove();
+        }
+        confirmLabel.style.border = "";
+        confirmLabel.style.background = "";
+        confirmLabel.style.borderRadius = "";
+      }
+    }
+  }
+
+  function refreshArticleMissingForCurrentDraft() {
+    if (!reviewState || !reviewState.medications.length) return;
+
+    var card = document.getElementById("draftCard");
+    if (!card) return;
+
+    reviewState.medications.forEach(function (medication) {
+      var article = card.querySelector('[data-review-id="' + medication.reviewId + '"]');
+      if (article) {
+        refreshArticleMissing(article, medication);
+      }
+    });
+
+    var allConfirmReady = reviewState.medications.length > 0 &&
+      reviewState.medications.every(function (medication) {
+        return medication.confirmed === true;
+      });
+
+    var documentConfirm = document.getElementById("documentConfirm");
+    var documentReviewStatus = document.getElementById("documentReviewStatus");
+    if (documentReviewStatus) {
+      if (!allConfirmReady) {
+        var leftCount = reviewState.medications.filter(function (medication) {
+          return medication.confirmed !== true;
+        }).length;
+        documentReviewStatus.textContent = "먼저 약별 확인을 완료해 주세요: " + leftCount + "개 남음";
+      } else {
+        documentReviewStatus.textContent = "마지막으로 전체 내용을 확인하고 체크해 주세요.";
+      }
+    }
+    if (documentConfirm) {
+      var parent = documentConfirm.parentElement;
+      if (!allConfirmReady) {
+        parent.style.border = "2px solid #B91C1C";
+        parent.style.background = "#FEF2F2";
+        parent.style.borderRadius = "10px";
+      } else {
+        parent.style.border = "";
+        parent.style.background = "";
+        parent.style.borderRadius = "";
+      }
+    }
   }
 
   function updateDocumentReview() {
@@ -693,6 +964,7 @@
         }
 
         var article = document.createElement("article");
+        article.setAttribute("data-review-id", nextReviewState.medications[index].reviewId);
         article.style.marginTop = "24px";
         article.style.paddingTop = "16px";
         article.style.borderTop = "1px solid #E5E7EB";
@@ -760,6 +1032,8 @@
             }
 
             updateDocumentReview();
+
+            refreshArticleMissingForCurrentDraft();
 
             if (key === "timing" || key === "frequency") {
               medication.timeSlots = [];
@@ -852,6 +1126,8 @@
           nextReviewState.documentConfirmed = false;
           updateDocumentReview();
 
+          refreshArticleMissingForCurrentDraft();
+
           var sourceControl =
             article.querySelector(".medication-timing-source");
           if (sourceControl) {
@@ -922,19 +1198,26 @@
           ["evening", "저녁"],
           ["bedtime", "자기 전"]
         ].forEach(function (item) {
-          var slotLabel = document.createElement("label");
-          slotLabel.style.display = "block";
-          slotLabel.style.padding = "8px 0";
-
-          var checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = item[0];
-          checkbox.checked =
+          var touchCheckbox = document.createElement("input");
+          touchCheckbox.type = "checkbox";
+          touchCheckbox.className = "touch-checkbox";
+          touchCheckbox.value = item[0];
+          touchCheckbox.checked =
             medication.scheduleType === "daily" &&
             medication.timeSlots.includes(item[0]);
-          checkbox.style.marginRight = "8px";
 
-          checkbox.addEventListener("change", function () {
+          var touchLabel = document.createElement("label");
+          touchLabel.className = "touch-checkbox-label";
+          touchLabel.style.display = "flex";
+          touchLabel.style.alignItems = "flex-start";
+
+          touchLabel.appendChild(touchCheckbox);
+
+          var touchSpan = document.createElement("span");
+          touchSpan.textContent = item[1];
+          touchLabel.appendChild(touchSpan);
+
+          touchCheckbox.addEventListener("change", function () {
             if (reviewState !== nextReviewState) return;
             if (medication.scheduleType !== "daily") return;
 
@@ -965,6 +1248,8 @@
 
             updateDocumentReview();
 
+            refreshArticleMissingForCurrentDraft();
+
             nextReviewState.documentConfirmed = false;
 
             timeEl.textContent = "시간대: " + (
@@ -976,9 +1261,7 @@
             );
           });
 
-          slotLabel.appendChild(checkbox);
-          slotLabel.appendChild(document.createTextNode(item[1]));
-          slotGroup.appendChild(slotLabel);
+          slotGroup.appendChild(touchLabel);
         });
 
         article.appendChild(slotGroup);
@@ -1008,7 +1291,15 @@
           sourceSelect.appendChild(option);
         });
 
-        sourceSelect.value = "";
+        sourceSelect.value = medication.timingSource || "";
+
+        var sourceHint = document.createElement("p");
+        sourceHint.textContent =
+          "기본 선택된 확인 방법입니다. 실제 원본과 대조한 뒤 아래 확인란을 체크해 주세요. 불명확하면 ‘아직 확인하지 못함’을 선택하세요.";
+        sourceHint.style.marginTop = "8px";
+        sourceHint.style.color = "#718096";
+        sourceHint.style.fontSize = "13pt";
+        article.appendChild(sourceHint);
 
         sourceSelect.addEventListener("change", function () {
           if (reviewState !== nextReviewState) return;
@@ -1033,6 +1324,8 @@
 
           updateDocumentReview();
 
+          refreshArticleMissingForCurrentDraft();
+
           nextReviewState.documentConfirmed = false;
         });
 
@@ -1040,25 +1333,33 @@
         sourceHint.textContent =
           "이 약의 복용 시점·조건과 선택한 시간대를 확인한 경우에만 고르세요. AI가 읽은 근거만 보고 확인 완료로 선택하지 마세요.";
         sourceHint.style.marginTop = "8px";
-
         article.appendChild(sourceLabel);
         article.appendChild(sourceSelect);
         article.appendChild(sourceHint);
 
         var confirmLabel = document.createElement("label");
-        confirmLabel.style.display = "block";
+        confirmLabel.className = "touch-checkbox-label";
+        confirmLabel.style.display = "flex";
+        confirmLabel.style.alignItems = "flex-start";
         confirmLabel.style.marginTop = "20px";
         confirmLabel.style.padding = "12px";
+        confirmLabel.style.gap = "12px";
 
         var confirmBox = document.createElement("input");
         confirmBox.type = "checkbox";
-        confirmBox.className = "medication-confirm";
+        confirmBox.className = "touch-checkbox";
         confirmBox.checked = false;
-        confirmBox.style.marginRight = "8px";
+
+        var confirmSpan = document.createElement("span");
+        confirmSpan.textContent = "약 이름·1회량·횟수·복용 시점·조건을 원본과 대조했고, 불명확한 내용은 약사에게 확인했습니다.";
 
         var confirmNotice = document.createElement("p");
         confirmNotice.className = "medication-confirm-notice";
         confirmNotice.setAttribute("aria-live", "polite");
+        confirmNotice.style.marginTop = "8px";
+        confirmNotice.style.color = "#718096";
+        confirmNotice.style.fontSize = "13pt";
+        confirmNotice.textContent = "";
 
         confirmBox.addEventListener("change", function () {
           if (reviewState !== nextReviewState) return;
@@ -1069,6 +1370,7 @@
             medication.confirmed = false;
             confirmNotice.textContent = "확인을 해제했습니다.";
             updateDocumentReview();
+            refreshArticleMissingForCurrentDraft();
             return;
           }
 
@@ -1115,6 +1417,7 @@
             confirmNotice.textContent =
               "먼저 확인해 주세요: " + missing.join(", ");
             updateDocumentReview();
+            refreshArticleMissingForCurrentDraft();
             return;
           }
 
@@ -1123,13 +1426,11 @@
             "사용자가 대조했음을 표시했습니다. 내용을 수정하면 확인이 해제됩니다.";
 
           updateDocumentReview();
+          refreshArticleMissingForCurrentDraft();
         });
 
         confirmLabel.appendChild(confirmBox);
-        confirmLabel.appendChild(document.createTextNode(
-          "약 이름·1회량·횟수·복용 시점·조건을 원본과 대조했고, 불명확한 내용은 약사에게 확인했습니다."
-        ));
-
+        confirmLabel.appendChild(confirmSpan);
         article.appendChild(confirmLabel);
         article.appendChild(confirmNotice);
         fragment.appendChild(article);
@@ -1148,6 +1449,7 @@
       list.appendChild(fragment);
       issues.appendChild(issueFragment);
       reviewState = nextReviewState;
+      refreshArticleMissingForCurrentDraft();
       updateDocumentReview();
       card.style.fontSize = "20px";
       card.style.lineHeight = "1.6";
@@ -1301,6 +1603,7 @@
 
       reviewState.documentConfirmed = ready && this.checked;
       updateDocumentReview();
+      refreshArticleMissingForCurrentDraft();
     });
 })();
 </script>
