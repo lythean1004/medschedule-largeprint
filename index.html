@@ -602,6 +602,58 @@
     min-height: 48px;
   }
 
+  .share-preview-head {
+    font-size: 15pt;
+    font-weight: 700;
+    color: #1A202C;
+    margin: 0 0 8px;
+  }
+
+  .share-preview-text {
+    font-size: 15pt;
+    font-weight: 600;
+    color: #1A202C;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    margin: 0;
+    padding: 12px;
+    background: #FAF8F5;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+  }
+
+  .share-preview-note {
+    margin-top: 10px;
+    color: #718096;
+    font-size: 13pt;
+    font-weight: 500;
+  }
+
+  .share-preview-text:focus {
+    outline: 3px solid #2563EB;
+    outline-offset: 2px;
+  }
+
+  .copy-fallback-textarea {
+    font-size: 15pt;
+    font-weight: 600;
+    color: #1A202C;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    display: block;
+    width: 100%;
+    min-height: 220px;
+    padding: 12px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FAF8F5;
+    color: #1A202C;
+    resize: vertical;
+    font-family: inherit;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .result-track {
       scroll-behavior: auto;
@@ -710,9 +762,23 @@
       </div>
 
       <div class="btn-row">
+        <button type="button" id="shareBtn" class="btn-secondary" disabled>시간표 공유</button>
+        <button type="button" id="copyBtn" class="btn-secondary" disabled>내용 복사</button>
         <button type="button" id="backToEditBtn" class="btn-secondary">내용 다시 수정</button>
         <button type="button" id="previewBtn" class="btn-secondary" disabled>큰 글씨 시간표 보기</button>
         <button type="button" id="printBtn" class="btn-secondary" disabled>인쇄 / 저장</button>
+      </div>
+
+      <div id="sharePreview" style="display:none; margin-top:16px;">
+        <div class="share-preview-head" style="font-size:15pt; font-weight:700; color:#1A202C; margin:0 0 8px;">공유할 시간표</div>
+        <pre id="sharePreviewText" class="share-preview-text"></pre>
+        <div class="share-preview-note" style="margin-top:10px; color:#718096; font-size:13pt; font-weight:500;">공유 버튼을 누르면 기기 공유 화면으로 전달됩니다. 이 화면은 공유 예시이며, 실제 전송 대상은 선택한 앱에 따라 달라집니다.</div>
+      </div>
+
+      <div id="copyFallback" style="display:none; margin-top:16px;">
+        <p class="share-preview-head" style="font-size:15pt; font-weight:700; color:#1A202C; margin:0 0 8px;">복사할 시간표</p>
+        <textarea id="copyFallbackText" class="share-preview-text" readonly style="width:100%; min-height:220px; font:inherit; padding:12px; border:2px solid #E5E7EB; border-radius:12px; background:#FAF8F5; color:#1A202C; resize:vertical;"></textarea>
+        <p class="share-preview-note" style="margin-top:10px; color:#718096; font-size:13pt; font-weight:500;">복사가 되지 않았습니다. 위 내용을 눌러 선택한 뒤 복사하세요.</p>
       </div>
     </div>
 
@@ -1430,6 +1496,8 @@
 
     document.getElementById("resultCard").style.display = "block";
     document.getElementById("confirmedStatus").textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
+
+    updateResultAfterButtons();
   }
 
   function scrollToResultPage(index, total) {
@@ -2134,20 +2202,303 @@
 
   resetBtn.addEventListener("click", function () {
     if (isProcessing) return;
-
     clearSourceImage();
     file.value = "";
     hideAll();
     refreshConfirmedPreview();
-    resultCard.querySelector("#result").textContent = "";
-    document.getElementById("sourceNote").textContent = "";
+    updateResultAfterButtons();
+    result.textContent = "";
+    sourceNote.textContent = "";
+  });
 
-    resultCard.style.display = "none";
-    resultTrack.style.display = "none";
-    resultNav.style.display = "none";
-    confirmedStatus.textContent = "";
-    document.getElementById("resultCards").replaceChildren();
-    draftCard.style.display = "block";
+  function buildShareTextFromSchedule(schedule) {
+    if (!schedule) {
+      return "";
+    }
+
+    var lines = [];
+    lines.push("약 먹는 시간표");
+    lines.push("");
+    lines.push("사용자가 원본과 대조한 내용입니다.");
+    lines.push("");
+
+    function addGroup(title, meds) {
+      if (meds.length === 0) {
+        lines.push(title + ": 확인한 시간표에 등록된 약이 없습니다");
+        lines.push("");
+        return;
+      }
+      lines.push(title);
+      meds.forEach(function (m) {
+        var parts = [];
+        if (m.name) parts.push(m.name);
+        if (m.dose) parts.push("1회량: " + m.dose);
+        if (m.timing) parts.push("복용 조건: " + m.timing);
+        if (m.frequency) parts.push("복용 횟수: " + m.frequency);
+        if (m.duration) parts.push("며칠분: " + m.duration);
+        lines.push(parts.join(" / "));
+      });
+      lines.push("");
+    }
+
+    addGroup("아침", schedule.morning);
+    addGroup("점심", schedule.noon);
+    addGroup("저녁", schedule.evening);
+    addGroup("자기 전", schedule.bedtime);
+    addGroup("필요할 때만 먹는 약", schedule.asNeeded);
+    addGroup("매일 먹지 않는 약", schedule.nonDaily);
+    addGroup("복용 유형 확인 필요", schedule.unresolved);
+
+    return lines.join("\n");
+  }
+
+  function getConfirmedScheduleForShare() {
+    var schedule = buildConfirmedSchedule(reviewState);
+    if (!schedule) {
+      return null;
+    }
+
+    var grouped = {
+      morning: schedule.morning,
+      noon: schedule.noon,
+      evening: schedule.evening,
+      bedtime: [],
+      asNeeded: [],
+      nonDaily: [],
+      unresolved: []
+    };
+
+    schedule.others.forEach(function (m) {
+      if (m.scheduleType === "unresolved") {
+        grouped.unresolved.push(m);
+      } else if (m.scheduleType === "as_needed") {
+        grouped.asNeeded.push(m);
+      } else if (m.scheduleType === "non_daily") {
+        grouped.nonDaily.push(m);
+      } else if (m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1) {
+        grouped.bedtime.push(m);
+      } else {
+        grouped.bedtime.push(m);
+      }
+    });
+
+    return {
+      morning: grouped.morning,
+      noon: grouped.noon,
+      evening: grouped.evening,
+      bedtime: grouped.bedtime,
+      asNeeded: grouped.asNeeded,
+      nonDaily: grouped.nonDaily,
+      unresolved: grouped.unresolved,
+      reviewState: schedule.reviewState
+    };
+  }
+
+  function updateShareButtonsIfReady() {
+    var shareBtn = document.getElementById("shareBtn");
+    var copyBtn = document.getElementById("copyBtn");
+    if (!shareBtn || !copyBtn) {
+      return;
+    }
+
+    if (!reviewState || !reviewState.medications || reviewState.medications.length === 0) {
+      shareBtn.disabled = true;
+      copyBtn.disabled = true;
+      return;
+    }
+
+    if (!canShowConfirmedSchedule()) {
+      shareBtn.disabled = true;
+      copyBtn.disabled = true;
+      return;
+    }
+
+    shareBtn.disabled = false;
+    copyBtn.disabled = false;
+  }
+
+  function renderSharePreview(schedule) {
+    var preview = document.getElementById("sharePreview");
+    var textEl = document.getElementById("sharePreviewText");
+    if (!preview || !textEl) {
+      return;
+    }
+
+    textEl.textContent = buildShareTextFromSchedule(schedule);
+    preview.style.display = "block";
+  }
+
+  function showCopyFallback(schedule) {
+    var fallback = document.getElementById("copyFallback");
+    var textEl = document.getElementById("copyFallbackText");
+    if (!fallback || !textEl) {
+      return;
+    }
+
+    textEl.value = buildShareTextFromSchedule(schedule);
+    fallback.style.display = "block";
+  }
+
+  function clearShareUI() {
+    var preview = document.getElementById("sharePreview");
+    var fallback = document.getElementById("copyFallback");
+    if (preview) {
+      preview.style.display = "none";
+    }
+    if (fallback) {
+      fallback.style.display = "none";
+    }
+  }
+
+  function copyShareText(text) {
+    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () {
+        return true;
+      }).catch(function () {
+        return false;
+      });
+    }
+    return Promise.resolve(false);
+  }
+
+  function tryShare(text) {
+    var shareData = {
+      title: "약 먹는 시간표",
+      text: text,
+      url: null
+    };
+
+    if (navigator && navigator.share) {
+      return navigator.share(shareData);
+    }
+    return Promise.reject(new Error("share_not_supported"));
+  }
+
+  shareBtn.addEventListener("click", function () {
+    if (!shareBtn || shareBtn.disabled) {
+      return;
+    }
+
+    if (!canShowConfirmedSchedule()) {
+      showErr("공유하기에 앞서 시간표 확인이 필요합니다.");
+      return;
+    }
+
+    var schedule = getConfirmedScheduleForShare();
+    if (!schedule) {
+      showErr("공유할 시간표를 준비하지 못했습니다.");
+      return;
+    }
+
+    var text = buildShareTextFromSchedule(schedule);
+    if (!text) {
+      showErr("공유할 내용을 만들지 못했습니다.");
+      return;
+    }
+
+    renderSharePreview(schedule);
+
+    tryShare(text).then(function () {
+      clearShareUI();
+    }).catch(function (error) {
+      var code = error && error.name ? error.name : "";
+      if (code === "AbortError") {
+        clearShareUI();
+        return;
+      }
+
+      if (code === "NotAllowedError") {
+        clearShareUI();
+      }
+
+      copyShareText(text).then(function (ok) {
+        if (ok) {
+          clearShareUI();
+          showErr("시간표를 복사했습니다.\n받는 사람에게 붙여넣어 주세요.");
+          return;
+        }
+        showCopyFallback(schedule);
+        showErr("복사가 되지 않았습니다. 위 내용을 눌러 선택한 뒤 복사하세요.");
+      }).catch(function () {
+        showCopyFallback(schedule);
+        showErr("복사가 되지 않았습니다. 위 내용을 눌러 선택한 뒤 복사하세요.");
+      });
+    });
+  });
+
+  copyBtn.addEventListener("click", function () {
+    if (!copyBtn || copyBtn.disabled) {
+      return;
+    }
+
+    if (!canShowConfirmedSchedule()) {
+      showErr("복사하기에 앞서 시간표 확인이 필요합니다.");
+      return;
+    }
+
+    var schedule = getConfirmedScheduleForShare();
+    if (!schedule) {
+      showErr("복사할 시간표를 준비하지 못했습니다.");
+      return;
+    }
+
+    var text = buildShareTextFromSchedule(schedule);
+    if (!text) {
+      showErr("복사할 내용을 만들지 못했습니다.");
+      return;
+    }
+
+    renderSharePreview(schedule);
+
+    copyShareText(text).then(function (ok) {
+      if (ok) {
+        clearShareUI();
+        showErr("시간표를 복사했습니다.\n받는 사람에게 붙여넣어 주세요.");
+        return;
+      }
+      showCopyFallback(schedule);
+      showErr("복사가 되지 않았습니다. 위 내용을 눌러 선택한 뒤 복사하세요.");
+    }).catch(function () {
+      showCopyFallback(schedule);
+      showErr("복사가 되지 않았습니다. 위 내용을 눌러 선택한 뒤 복사하세요.");
+    });
+  });
+
+  function updateResultAfterButtons() {
+    updateShareButtonsIfReady();
+    updateResultNav();
+  }
+
+  resetBtn.addEventListener("click", function () {
+    if (isProcessing) return;
+    clearSourceImage();
+    file.value = "";
+    hideAll();
+    refreshConfirmedPreview();
+    updateResultAfterButtons();
+    result.textContent = "";
+    sourceNote.textContent = "";
+  });
+
+  document.getElementById("sourceZoomBtn").addEventListener("click", function () {
+    var viewport = document.getElementById("sourceViewport");
+    var button = document.getElementById("sourceZoomBtn");
+
+    var expanded = button.getAttribute("aria-expanded") === "true";
+
+    if (expanded) {
+      viewport.scrollTop = 0;
+      viewport.scrollLeft = 0;
+      viewport.classList.remove("is-zoomed");
+      button.textContent = "사진 크게 보기";
+      button.setAttribute("aria-expanded", "false");
+    } else {
+      viewport.scrollTop = 0;
+      viewport.scrollLeft = 0;
+      viewport.classList.add("is-zoomed");
+      button.textContent = "사진 원래 크기로";
+      button.setAttribute("aria-expanded", "true");
+    }
   });
 
   document.getElementById("sourcePrevBtn").addEventListener("click", function () {
@@ -2215,6 +2566,7 @@
     resultNav.style.display = "none";
     confirmedStatus.textContent = "";
     document.getElementById("resultCards").replaceChildren();
+    clearShareUI();
     draftCard.style.display = "block";
   });
 
