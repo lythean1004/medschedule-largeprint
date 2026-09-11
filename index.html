@@ -445,10 +445,10 @@
   </div>
 
 <script>
+/* 이 페이지의 백엔드 요청은 {{API_BASE}}/api/schedule 에서 처리합니다. */
 (function () {
   var pick = document.getElementById("pick");
   var file = document.getElementById("file");
-  var hint = document.getElementById("hint");
   var status = document.getElementById("status");
   var resultCard = document.getElementById("resultCard");
   var result = document.getElementById("result");
@@ -457,7 +457,6 @@
   var printBtn = document.getElementById("printBtn");
   var resetBtn = document.getElementById("resetBtn");
   var isProcessing = false;
-  var reviewState = null;
 
   function setProcessing(active) {
     isProcessing = active;
@@ -468,14 +467,12 @@
   }
 
   function hideAll() {
-    clearMedicationDraft();
     errCard.style.display = "none";
     resultCard.style.display = "none";
     status.style.display = "none";
   }
 
   function showErr(msg) {
-    clearMedicationDraft();
     resultCard.style.display = "none";
     status.style.display = "none";
 
@@ -488,626 +485,15 @@
     errCard.style.display = "block";
   }
 
-  function clearMedicationDraft() {
-    reviewState = null;
-    document.getElementById("draftCard").style.display = "none";
-    document.getElementById("draftList").replaceChildren();
-    document.getElementById("draftIssues").replaceChildren();
-    updateDocumentReview();
-  }
-
-  function clearSourceImage() {
-    resetSourceZoom();
-    document.getElementById("sourceCard").style.display = "none";
-    document.getElementById("sourceImage").removeAttribute("src");
-  }
-
   function showSourceImage(dataUrl) {
-    resetSourceZoom();
     var image = document.getElementById("sourceImage");
     image.src = dataUrl;
     document.getElementById("sourceCard").style.display = "block";
   }
 
-  function resetSourceZoom() {
-    var viewport = document.getElementById("sourceViewport");
-    var button = document.getElementById("sourceZoomBtn");
-    viewport.classList.remove("is-zoomed");
-    viewport.scrollTop = 0;
-    viewport.scrollLeft = 0;
-    button.textContent = "사진 크게 보기";
-    button.setAttribute("aria-expanded", "false");
-  }
-
-  function createReviewState(draft) {
-    var originalDraft = JSON.parse(JSON.stringify(draft));
-
-    var medications = originalDraft.medications.map(function (med, index) {
-      var values = {};
-
-      ["name", "dose", "frequency", "timing", "duration"].forEach(function (key) {
-        values[key] = med[key].status === "found"
-          ? med[key].value
-          : "";
-      });
-
-      return {
-        reviewId: "review-" + (index + 1),
-        originalIndex: index,
-        values: values,
-        scheduleType: med.schedule_type,
-        timeSlots: med.time_slots.slice(),
-        timingSource: null,
-        confirmed: false
-      };
-    });
-
-    return {
-      originalDraft: originalDraft,
-      medications: medications,
-      documentConfirmed: false
-    };
-  }
-
-  function updateDocumentReview() {
-    var box = document.getElementById("documentConfirm");
-    var message = document.getElementById("documentReviewStatus");
-
-    if (!reviewState || !reviewState.medications.length) {
-      box.checked = false;
-      box.disabled = true;
-      message.textContent = "약별 대조 확인을 먼저 진행해 주세요.";
-      return;
-    }
-
-    var total = reviewState.medications.length;
-    var confirmed = reviewState.medications.filter(function (medication) {
-      return medication.confirmed === true;
-    }).length;
-
-    var ready = confirmed === total;
-
-    if (!ready) {
-      reviewState.documentConfirmed = false;
-    }
-
-    box.disabled = !ready;
-    box.checked = ready && reviewState.documentConfirmed === true;
-
-    message.textContent = box.checked
-      ? "전체 대조 확인을 표시했습니다. 내용을 수정하면 확인이 해제됩니다."
-      : "약 " + total + "개 중 " + confirmed + "개 대조 완료. " +
-        (ready
-          ? "누락된 약과 문서 확인 사항까지 검토한 뒤 전체 확인을 선택해 주세요."
-          : "각 약의 대조 확인을 먼저 완료해 주세요.");
-  }
-
-  function renderMedicationDraft(draft) {
-    reviewState = null;
-    var card = document.getElementById("draftCard");
-    var list = document.getElementById("draftList");
-    var issues = document.getElementById("draftIssues");
-
-    card.style.display = "none";
-    list.replaceChildren();
-    issues.replaceChildren();
-    resultCard.style.display = "none";
-
-    var fields = [
-      ["name", "약 이름"],
-      ["dose", "1회 먹는 양"],
-      ["frequency", "복용 횟수"],
-      ["timing", "복용 시점"],
-      ["duration", "며칠분"]
-    ];
-    var types = {
-      daily: "매일 복용",
-      as_needed: "필요할 때만 복용",
-      non_daily: "매일 먹지 않는 약",
-      unresolved: "복용 유형 확인 필요"
-    };
-    var slots = {
-      morning: "아침",
-      noon: "점심",
-      evening: "저녁",
-      bedtime: "자기 전"
-    };
-
-    try {
-      if (
-        !draft ||
-        !Array.isArray(draft.medications) ||
-        draft.medications.length === 0 ||
-        !Array.isArray(draft.document_issues) ||
-        !["ok", "partial"].includes(draft.extraction_status)
-      ) {
-        throw new Error("invalid draft");
-      }
-
-      var nextReviewState = createReviewState(draft);
-
-      var fragment = document.createDocumentFragment();
-
-      draft.medications.forEach(function (med, index) {
-        if (
-          !med ||
-          !Object.prototype.hasOwnProperty.call(types, med.schedule_type) ||
-          !Array.isArray(med.time_slots) ||
-          med.time_slots.some(function (slot) {
-            return !Object.prototype.hasOwnProperty.call(slots, slot);
-          })
-        ) {
-          throw new Error("invalid medication");
-        }
-
-        var article = document.createElement("article");
-        article.style.marginTop = "24px";
-        article.style.paddingTop = "16px";
-        article.style.borderTop = "1px solid #E5E7EB";
-        article.style.overflowWrap = "anywhere";
-
-        var title = document.createElement("h3");
-        title.textContent = "약 " + (index + 1);
-        article.appendChild(title);
-
-        fields.forEach(function (entry) {
-          var field = med[entry[0]];
-          if (
-            !field ||
-            !["found", "unresolved"].includes(field.status) ||
-            (field.value !== null && typeof field.value !== "string") ||
-            (field.evidence !== null && typeof field.evidence !== "string") ||
-            (field.status === "found" &&
-              (!field.value || !field.value.trim() ||
-               !field.evidence || !field.evidence.trim()))
-          ) {
-            throw new Error("invalid field");
-          }
-
-          var row = document.createElement("p");
-          row.style.marginTop = "12px";
-
-          var label = document.createElement("strong");
-          label.textContent = entry[1] + ": ";
-          row.appendChild(label);
-
-          var key = entry[0];
-          var input = document.createElement("input");
-          input.type = "text";
-          input.id = key + "-" + nextReviewState.medications[index].reviewId;
-          input.value = nextReviewState.medications[index].values[key];
-          input.placeholder = "원본을 보고 확인해 주세요";
-          input.setAttribute(
-            "aria-label",
-            "약 " + (index + 1) + " " + entry[1] + " 수정"
-          );
-          input.autocomplete = "off";
-          input.spellcheck = false;
-          input.style.display = "block";
-          input.style.width = "100%";
-          input.style.font = "inherit";
-          input.style.padding = "10px";
-          input.style.marginTop = "6px";
-
-          input.addEventListener("input", function () {
-            if (reviewState !== nextReviewState) return;
-
-            var medication = nextReviewState.medications[index];
-            medication.values[key] = input.value;
-            medication.confirmed = false;
-            nextReviewState.documentConfirmed = false;
-
-            var confirmation = article.querySelector(".medication-confirm");
-            if (confirmation) {
-              confirmation.checked = false;
-            }
-
-            var notice = article.querySelector(".medication-confirm-notice");
-            if (notice) {
-              notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
-            }
-
-            updateDocumentReview();
-
-            if (key === "timing" || key === "frequency") {
-              medication.timeSlots = [];
-              medication.timingSource = null;
-
-              var sourceControl =
-                article.querySelector(".medication-timing-source");
-              if (sourceControl) {
-                sourceControl.value = "";
-              }
-
-              var group = article.querySelector(".medication-slots");
-              if (group) {
-                group.querySelectorAll('input[type="checkbox"]').forEach(
-                  function (checkbox) {
-                    checkbox.checked = false;
-                  }
-                );
-              }
-
-              var timeDisplay = article.querySelector(".medication-time");
-              if (timeDisplay) {
-                timeDisplay.textContent = medication.scheduleType === "daily"
-                  ? "시간대: 다시 확인 필요"
-                  : medication.scheduleType === "unresolved"
-                    ? "복용 유형을 확인해 주세요."
-                    : "일반 시간표에 배치하지 않습니다. 복용 시점·조건을 확인해 주세요.";
-              }
-            }
-          });
-
-          row.appendChild(input);
-          article.appendChild(row);
-
-          if (field.evidence) {
-            var evidence = document.createElement("p");
-            evidence.style.color = "#4A5568";
-            evidence.textContent = "읽은 근거: " + field.evidence;
-            article.appendChild(evidence);
-          }
-        });
-
-        var medication = nextReviewState.medications[index];
-
-        var typeLabel = document.createElement("label");
-        typeLabel.textContent = "복용 유형";
-        typeLabel.htmlFor = "type-" + medication.reviewId;
-        typeLabel.style.display = "block";
-        typeLabel.style.marginTop = "16px";
-
-        var typeSelect = document.createElement("select");
-        typeSelect.id = typeLabel.htmlFor;
-        typeSelect.style.display = "block";
-        typeSelect.style.width = "100%";
-        typeSelect.style.font = "inherit";
-        typeSelect.style.padding = "10px";
-
-        [
-          ["unresolved", "확인 필요"],
-          ["daily", "매일 복용"],
-          ["as_needed", "필요할 때만 복용"],
-          ["non_daily", "매일 먹지 않는 약"]
-        ].forEach(function (item) {
-          var option = document.createElement("option");
-          option.value = item[0];
-          option.textContent = item[1];
-          typeSelect.appendChild(option);
-        });
-
-        typeSelect.value = medication.scheduleType;
-
-        typeSelect.addEventListener("change", function () {
-          if (reviewState !== nextReviewState) return;
-
-          medication.scheduleType = typeSelect.value;
-          medication.timeSlots = [];
-          medication.timingSource = null;
-
-          var confirmation = article.querySelector(".medication-confirm");
-          if (confirmation) {
-            confirmation.checked = false;
-          }
-
-          var notice = article.querySelector(".medication-confirm-notice");
-          if (notice) {
-            notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
-          }
-
-          updateDocumentReview();
-
-          var sourceControl =
-            article.querySelector(".medication-timing-source");
-          if (sourceControl) {
-            sourceControl.value = "";
-          }
-
-          var group = article.querySelector(".medication-slots");
-          if (group) {
-            group.disabled = medication.scheduleType !== "daily";
-            group.querySelectorAll('input[type="checkbox"]').forEach(
-              function (checkbox) {
-                checkbox.checked = false;
-              }
-            );
-          }
-
-          medication.confirmed = false;
-          nextReviewState.documentConfirmed = false;
-
-          var timeDisplay = article.querySelector(".medication-time");
-          if (timeDisplay) {
-            timeDisplay.textContent = medication.scheduleType === "daily"
-              ? "시간대: 다시 확인 필요"
-              : medication.scheduleType === "unresolved"
-                ? "복용 유형을 확인해 주세요."
-                : "일반 시간표에 배치하지 않습니다. 복용 시점·조건을 확인해 주세요.";
-          }
-        });
-
-        article.appendChild(typeLabel);
-        article.appendChild(typeSelect);
-
-        var timeEl = document.createElement("p");
-        timeEl.className = "medication-time";
-
-        if (medication.scheduleType === "daily") {
-          timeEl.textContent = "시간대: " + (
-            medication.timeSlots.length
-              ? medication.timeSlots.map(function (slot) {
-                  return slots[slot];
-                }).join(" · ")
-              : "확인 필요"
-          );
-        } else if (medication.scheduleType === "unresolved") {
-          timeEl.textContent = "복용 유형을 확인해 주세요.";
-        } else {
-          timeEl.textContent =
-            "일반 시간표에 배치하지 않습니다. 복용 시점·조건을 확인해 주세요.";
-        }
-
-        article.appendChild(timeEl);
-
-        var slotGroup = document.createElement("fieldset");
-        slotGroup.className = "medication-slots";
-        slotGroup.style.marginTop = "12px";
-        slotGroup.style.padding = "12px";
-        slotGroup.disabled = medication.scheduleType !== "daily";
-
-        var slotLegend = document.createElement("legend");
-        slotLegend.textContent = "원본 또는 약사에게 확인한 시간대";
-        slotGroup.appendChild(slotLegend);
-
-        var slotHint = document.createElement("p");
-        slotHint.textContent =
-          "횟수만 보고 선택하지 마세요. 확인되지 않으면 비워 두세요.";
-        slotGroup.appendChild(slotHint);
-
-        [
-          ["morning", "아침"],
-          ["noon", "점심"],
-          ["evening", "저녁"],
-          ["bedtime", "자기 전"]
-        ].forEach(function (item) {
-          var slotLabel = document.createElement("label");
-          slotLabel.style.display = "block";
-          slotLabel.style.padding = "8px 0";
-
-          var checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = item[0];
-          checkbox.checked =
-            medication.scheduleType === "daily" &&
-            medication.timeSlots.includes(item[0]);
-          checkbox.style.marginRight = "8px";
-
-          checkbox.addEventListener("change", function () {
-            if (reviewState !== nextReviewState) return;
-            if (medication.scheduleType !== "daily") return;
-
-            medication.timeSlots = Array.from(
-              slotGroup.querySelectorAll("input:checked")
-            ).map(function (element) {
-              return element.value;
-            });
-
-            medication.timingSource = null;
-            medication.confirmed = false;
-
-            var confirmation = article.querySelector(".medication-confirm");
-            if (confirmation) {
-              confirmation.checked = false;
-            }
-
-            var notice = article.querySelector(".medication-confirm-notice");
-            if (notice) {
-              notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
-            }
-
-            var sourceControl =
-              article.querySelector(".medication-timing-source");
-            if (sourceControl) {
-              sourceControl.value = "";
-            }
-
-            updateDocumentReview();
-
-            nextReviewState.documentConfirmed = false;
-
-            timeEl.textContent = "시간대: " + (
-              medication.timeSlots.length
-                ? medication.timeSlots.map(function (slot) {
-                    return slots[slot];
-                  }).join(" · ")
-                : "확인 필요"
-            );
-          });
-
-          slotLabel.appendChild(checkbox);
-          slotLabel.appendChild(document.createTextNode(item[1]));
-          slotGroup.appendChild(slotLabel);
-        });
-
-        var sourceLabel = document.createElement("label");
-        sourceLabel.htmlFor = "timing-source-" + medication.reviewId;
-        sourceLabel.textContent = "복용 시점·시간대 확인 근거";
-        sourceLabel.style.display = "block";
-        sourceLabel.style.marginTop = "16px";
-
-        var sourceSelect = document.createElement("select");
-        sourceSelect.id = sourceLabel.htmlFor;
-        sourceSelect.className = "medication-timing-source";
-        sourceSelect.style.display = "block";
-        sourceSelect.style.width = "100%";
-        sourceSelect.style.font = "inherit";
-        sourceSelect.style.padding = "10px";
-
-        [
-          ["", "아직 확인하지 못함"],
-          ["original", "원본에 명시된 내용을 직접 확인함"],
-          ["pharmacist", "약사에게 직접 확인함"]
-        ].forEach(function (item) {
-          var option = document.createElement("option");
-          option.value = item[0];
-          option.textContent = item[1];
-          sourceSelect.appendChild(option);
-        });
-
-        sourceSelect.value = "";
-
-        sourceSelect.addEventListener("change", function () {
-          if (reviewState !== nextReviewState) return;
-
-          medication.timingSource =
-            sourceSelect.value === "original" ||
-            sourceSelect.value === "pharmacist"
-              ? sourceSelect.value
-              : null;
-
-          medication.confirmed = false;
-
-          var confirmation = article.querySelector(".medication-confirm");
-          if (confirmation) {
-            confirmation.checked = false;
-          }
-
-          var notice = article.querySelector(".medication-confirm-notice");
-          if (notice) {
-            notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
-          }
-
-          updateDocumentReview();
-
-          nextReviewState.documentConfirmed = false;
-        });
-
-        var sourceHint = document.createElement("p");
-        sourceHint.textContent =
-          "이 약의 복용 시점·조건과 선택한 시간대를 확인한 경우에만 고르세요. AI가 읽은 근거만 보고 확인 완료로 선택하지 마세요.";
-        sourceHint.style.marginTop = "8px";
-
-        article.appendChild(sourceLabel);
-        article.appendChild(sourceSelect);
-        article.appendChild(sourceHint);
-
-        var confirmLabel = document.createElement("label");
-        confirmLabel.style.display = "block";
-        confirmLabel.style.marginTop = "20px";
-        confirmLabel.style.padding = "12px";
-
-        var confirmBox = document.createElement("input");
-        confirmBox.type = "checkbox";
-        confirmBox.className = "medication-confirm";
-        confirmBox.checked = false;
-        confirmBox.style.marginRight = "8px";
-
-        var confirmNotice = document.createElement("p");
-        confirmNotice.className = "medication-confirm-notice";
-        confirmNotice.setAttribute("aria-live", "polite");
-
-        confirmBox.addEventListener("change", function () {
-          if (reviewState !== nextReviewState) return;
-
-          nextReviewState.documentConfirmed = false;
-
-          if (!confirmBox.checked) {
-            medication.confirmed = false;
-            confirmNotice.textContent = "확인을 해제했습니다.";
-            updateDocumentReview();
-            return;
-          }
-
-          var missing = [];
-
-          [
-            ["name", "약 이름"],
-            ["dose", "1회 먹는 양"],
-            ["timing", "복용 시점·조건"]
-          ].forEach(function (item) {
-            var value = medication.values[item[0]];
-            if (typeof value !== "string" || !value.trim()) {
-              missing.push(item[1]);
-            }
-          });
-
-          if (!["daily", "as_needed", "non_daily"].includes(
-            medication.scheduleType
-          )) {
-            missing.push("복용 유형");
-          }
-
-          if (medication.scheduleType === "daily") {
-            var frequency = medication.values.frequency;
-            if (typeof frequency !== "string" || !frequency.trim()) {
-              missing.push("복용 횟수");
-            }
-            if (medication.timeSlots.length === 0) {
-              missing.push("복용 시간대");
-            }
-          } else if (medication.timeSlots.length > 0) {
-            missing.push("일반 시간대 선택 해제");
-          }
-
-          if (!["original", "pharmacist"].includes(
-            medication.timingSource
-          )) {
-            missing.push("복용 시점·시간대 확인 근거");
-          }
-
-          if (missing.length > 0) {
-            confirmBox.checked = false;
-            medication.confirmed = false;
-            confirmNotice.textContent =
-              "먼저 확인해 주세요: " + missing.join(", ");
-            updateDocumentReview();
-            return;
-          }
-
-          medication.confirmed = true;
-          confirmNotice.textContent =
-            "사용자가 대조했음을 표시했습니다. 내용을 수정하면 확인이 해제됩니다.";
-
-          updateDocumentReview();
-        });
-
-        confirmLabel.appendChild(confirmBox);
-        confirmLabel.appendChild(document.createTextNode(
-          "약 이름·1회량·횟수·복용 시점·조건을 원본과 대조했고, 불명확한 내용은 약사에게 확인했습니다."
-        ));
-
-        article.appendChild(confirmLabel);
-        article.appendChild(confirmNotice);
-        fragment.appendChild(article);
-      });
-
-      var issueFragment = document.createDocumentFragment();
-      draft.document_issues.forEach(function (issue) {
-        if (typeof issue !== "string") {
-          throw new Error("invalid issue");
-        }
-        var p = document.createElement("p");
-        p.textContent = "확인 사항: " + issue;
-        issueFragment.appendChild(p);
-      });
-
-      list.appendChild(fragment);
-      issues.appendChild(issueFragment);
-      reviewState = nextReviewState;
-      updateDocumentReview();
-      card.style.fontSize = "20px";
-      card.style.lineHeight = "1.6";
-      errCard.style.display = "none";
-      status.style.display = "none";
-      card.style.display = "block";
-    } catch (error) {
-      reviewState = null;
-      list.replaceChildren();
-      issues.replaceChildren();
-      card.style.display = "none";
-      showErr("약별 초안 형식을 확인하지 못했습니다.");
-    }
+  function clearSourceImage() {
+    document.getElementById("sourceCard").style.display = "none";
+    document.getElementById("sourceImage").removeAttribute("src");
   }
 
   function postSchedule(dataUrl) {
@@ -1141,15 +527,158 @@
             return;
           }
 
+          var draft = json.draft;
           result.textContent = "";
           sourceNote.textContent = "";
-          renderMedicationDraft(json.draft);
+          renderMedicationDraft(draft);
         })
         .catch(function () {
           status.style.display = "none";
           showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
         })
     );
+  }
+
+  function renderMedicationDraft(draft) {
+    var card = document.getElementById("draftCard");
+    var list = document.getElementById("draftList");
+    var issues = document.getElementById("draftIssues");
+
+    card.style.display = "none";
+    list.replaceChildren();
+    issues.replaceChildren();
+    resultCard.style.display = "none";
+
+    var slots = {
+      morning: "아침",
+      noon: "점심",
+      evening: "저녁",
+      bedtime: "자기 전"
+    };
+
+    try {
+      if (
+        !draft ||
+        !Array.isArray(draft.medications) ||
+        draft.medications.length === 0 ||
+        !Array.isArray(draft.document_issues) ||
+        !["ok", "partial"].includes(draft.extraction_status)
+      ) {
+        throw new Error("invalid draft");
+      }
+
+      var fragment = document.createDocumentFragment();
+
+      draft.medications.forEach(function (med, index) {
+        var article = document.createElement("article");
+        article.style.marginTop = "24px";
+        article.style.paddingTop = "16px";
+        article.style.borderTop = "1px solid #E5E7EB";
+        article.style.overflowWrap = "anywhere";
+
+        var title = document.createElement("h3");
+        title.textContent = "약 " + (index + 1);
+        article.appendChild(title);
+
+        var nameField = med.name;
+        var doseField = med.dose;
+        var frequencyField = med.frequency;
+        var timingField = med.timing;
+        var durationField = med.duration;
+
+        function fieldRow(label, field, key) {
+          var row = document.createElement("p");
+          row.style.marginTop = "12px";
+
+          var labelEl = document.createElement("strong");
+          labelEl.textContent = label + ": ";
+          row.appendChild(labelEl);
+
+          var valueEl = document.createElement("span");
+          valueEl.style.fontWeight = "700";
+          valueEl.textContent = field.status === "found" ? field.value : "(안 읽힘)";
+          row.appendChild(valueEl);
+
+          if (field.evidence) {
+            var evidenceEl = document.createElement("p");
+            evidenceEl.style.color = "#4A5568";
+            evidenceEl.style.fontSize = "13pt";
+            evidenceEl.style.marginTop = "4px";
+            evidenceEl.textContent = "읽은 근거: " + field.evidence;
+            row.appendChild(evidenceEl);
+          }
+
+          return row;
+        }
+
+        article.appendChild(fieldRow("약 이름", nameField, "name"));
+        article.appendChild(fieldRow("1회 먹는 양", doseField, "dose"));
+        article.appendChild(fieldRow("복용 횟수", frequencyField, "frequency"));
+        article.appendChild(fieldRow("복용 시점", timingField, "timing"));
+        article.appendChild(fieldRow("며칠분", durationField, "duration"));
+
+        var typeLine = document.createElement("p");
+        typeLine.style.marginTop = "14px";
+        typeLine.style.color = "#1A202C";
+
+        var typeLabel = document.createElement("strong");
+        typeLabel.textContent = "복용 유형: ";
+        typeLine.appendChild(typeLabel);
+
+        var typeValue = document.createElement("span");
+        typeValue.style.fontWeight = "700";
+
+        var typeMap = {
+          daily: "매일 복용",
+          as_needed: "필요할 때만 복용",
+          non_daily: "매일 먹지 않는 약",
+          unresolved: "복용 유형 확인 필요"
+        };
+        typeValue.textContent = typeMap[med.schedule_type] || med.schedule_type;
+        typeLine.appendChild(typeValue);
+
+        article.appendChild(typeLine);
+
+        if (med.schedule_type === "daily" && med.time_slots.length > 0) {
+          var slotLine = document.createElement("p");
+          slotLine.style.marginTop = "8px";
+          slotLine.style.color = "#16A34A";
+
+          var slotLabel = document.createElement("strong");
+          slotLabel.textContent = "시간대: ";
+          slotLine.appendChild(slotLabel);
+
+          var slotValue = document.createElement("span");
+          slotValue.style.fontWeight = "700";
+          slotValue.textContent = med.time_slots.map(function (slot) {
+            return slots[slot] || slot;
+          }).join(" · ");
+          slotLine.appendChild(slotValue);
+
+          article.appendChild(slotLine);
+        }
+
+        fragment.appendChild(article);
+      });
+
+      var issueFragment = document.createDocumentFragment();
+      draft.document_issues.forEach(function (issue) {
+        var p = document.createElement("p");
+        p.textContent = "확인 사항: " + issue;
+        issueFragment.appendChild(p);
+      });
+
+      list.appendChild(fragment);
+      issues.appendChild(issueFragment);
+      card.style.display = "block";
+      errCard.style.display = "none";
+      status.style.display = "none";
+      card.style.fontSize = "20px";
+      card.style.lineHeight = "1.6";
+    } catch (error) {
+      card.style.display = "none";
+      showErr("약별 초안 형식을 확인하지 못했습니다.");
+    }
   }
 
   pick.addEventListener("click", function () {
@@ -1166,7 +695,6 @@
 
     setProcessing(true);
     clearSourceImage();
-    clearMedicationDraft();
     hideAll();
     result.textContent = "";
     sourceNote.textContent = "";
@@ -1218,37 +746,6 @@
     result.textContent = "";
     sourceNote.textContent = "";
   });
-
-  document.getElementById("sourceZoomBtn")
-    .addEventListener("click", function () {
-      var viewport = document.getElementById("sourceViewport");
-      var expanded = viewport.classList.toggle("is-zoomed");
-      this.textContent = expanded ? "사진 크기 되돌리기" : "사진 크게 보기";
-      this.setAttribute("aria-expanded", String(expanded));
-
-      if (!expanded) {
-        viewport.scrollTop = 0;
-        viewport.scrollLeft = 0;
-      }
-
-      viewport.focus();
-    });
-
-  document.getElementById("documentConfirm")
-    .addEventListener("change", function () {
-      if (!reviewState) {
-        updateDocumentReview();
-        return;
-      }
-
-      var ready = reviewState.medications.length > 0 &&
-        reviewState.medications.every(function (medication) {
-          return medication.confirmed === true;
-        });
-
-      reviewState.documentConfirmed = ready && this.checked;
-      updateDocumentReview();
-    });
 })();
 </script>
 </body>
