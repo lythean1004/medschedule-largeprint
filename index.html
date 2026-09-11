@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>약 먹는 시간표</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&amp;family=Noto+Sans+KR:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-warm: #FAF8F5;
@@ -121,7 +121,10 @@
   .upload-card:hover { transform: translateY(-2px); box-shadow: 0 16px 48px -16px rgba(26, 32, 44, 0.16); }
 
   .upload-card-label {
-    display: inline-block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     background: var(--accent);
     color: var(--accent-text);
     border: none;
@@ -136,11 +139,30 @@
     box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.32);
     letter-spacing: -0.015em;
     line-height: 1.2;
+    min-height: 48px;
   }
 
   .upload-card-label:hover { background: var(--accent-hover); transform: scale(1.01); }
   .upload-card-label:active { transform: scale(0.985); box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.32); }
   .upload-card-label:focus-visible { outline: 4px solid rgba(37, 99, 235, 0.4); outline-offset: 3px; }
+  .upload-card-label .upload-hint { display: none; }
+
+  .upload-label-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .upload-card-label {
+      width: 100%;
+      flex-basis: 100%;
+    }
+    .upload-card-label .upload-hint { display: block; }
+  }
 
   .upload-card-label-inner {
     display: flex;
@@ -330,6 +352,11 @@
     .result-source { font-size: 11pt; color: #333; background: none; border: none; }
     .btn-secondary { display: none !important; }
     .preset-note { display: none !important; }
+    .result-nav { display: none !important; }
+    #reviewWorkspace { display: none !important; }
+    #draftCard { display: none !important; }
+    #sourceCard { display: none !important; }
+  }
 
   #reviewWorkspace {
     display: grid;
@@ -376,19 +403,6 @@
 
     #sourceViewport {
       max-height: 55dvh;
-    }
-  }
-
-  #reviewWorkspace {
-    display: none !important;
-  }
-
-    #draftCard {
-      display: none !important;
-    }
-
-    #sourceCard {
-      display: none !important;
     }
   }
 
@@ -756,6 +770,12 @@
       </div>
 
       <div id="resultNav" class="result-nav" style="display:none;">
+        <div class="result-nav-jump" role="group" aria-label="시간으로 이동">
+          <button type="button" id="resultJumpMorning" class="result-nav-jump-btn">아침</button>
+          <button type="button" id="resultJumpNoon" class="result-nav-jump-btn">점심</button>
+          <button type="button" id="resultJumpEvening" class="result-nav-jump-btn">저녁</button>
+          <button type="button" id="resultJumpOther" class="result-nav-jump-btn">그 외</button>
+        </div>
         <button type="button" id="resultPrevBtn" class="result-nav-btn">이전</button>
         <span id="resultPosition" style="flex:1 1 auto; text-align:center; font-size:16pt; font-weight:700; padding:8px 12px;">1 / 4</span>
         <button type="button" id="resultNextBtn" class="result-nav-btn">다음</button>
@@ -765,9 +785,10 @@
         <button type="button" id="shareBtn" class="btn-secondary" disabled>시간표 공유</button>
         <button type="button" id="copyBtn" class="btn-secondary" disabled>내용 복사</button>
         <button type="button" id="backToEditBtn" class="btn-secondary">내용 다시 수정</button>
-        <button type="button" id="previewBtn" class="btn-secondary" disabled>큰 글씨 시간표 보기</button>
         <button type="button" id="printBtn" class="btn-secondary" disabled>인쇄 / 저장</button>
       </div>
+
+      <div id="shareStatus" role="status" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
       <div id="sharePreview" style="display:none; margin-top:16px;">
         <div class="share-preview-head" style="font-size:15pt; font-weight:700; color:#1A202C; margin:0 0 8px;">공유할 시간표</div>
@@ -826,6 +847,8 @@
     <p>현재는 원본 대조·수정 단계입니다. 최종 시간표 인쇄는 준비 중입니다.</p>
   </div>
 
+  <button type="button" id="previewBtn" class="btn-secondary" disabled>큰 글씨 시간표 보기</button>
+
   <div style="margin-top:20px;">
     <button type="button" id="resetBtn" class="btn-secondary">다른 봉투 보기</button>
   </div>
@@ -836,25 +859,97 @@
 
 <script>
 (function () {
-  var pick = document.getElementById("pick");
-  var file = document.getElementById("file");
+  var updatingDocumentReview = false;
+  var confirmedSchedule = null;
+  var fileSelectBtn = document.createElement("button");
+  fileSelectBtn.type = "button";
+  fileSelectBtn.className = "upload-card-label";
+  fileSelectBtn.id = "fileSelectBtn";
+  fileSelectBtn.setAttribute("aria-label", "저장된 사진 선택");
+  fileSelectBtn.setAttribute("aria-busy", "false");
+  fileSelectBtn.innerHTML = '' +
+        '<span class="upload-card-label-inner">' +
+        '<span class="upload-icon-wrap">' +
+        '<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>' +
+        '<circle cx="12" cy="13" r="4"/>' +
+        '<path d="M16 19h-4a2 2 0 0 1-2-2v-1"/>' +
+        '</svg>' +
+        '</span>' +
+        '<span>저장된 사진 선택</span>' +
+        '<span class="upload-hint">사진첩에서 골라 주세요</span>' +
+        '</span>';
+
+  var captureBtn = document.createElement("button");
+  captureBtn.type = "button";
+  captureBtn.className = "upload-card-label";
+  captureBtn.id = "captureBtn";
+  captureBtn.setAttribute("aria-label", "사진 찍기");
+  captureBtn.setAttribute("aria-busy", "false");
+  captureBtn.innerHTML = '' +
+        '<span class="upload-card-label-inner">' +
+        '<span class="upload-icon-wrap">' +
+        '<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>' +
+        '<circle cx="12" cy="13" r="4"/>' +
+        '<path d="M16 19h-4a2 2 0 0 1-2-2v-1"/>' +
+        '</svg>' +
+        '</span>' +
+        '<span>사진 찍기</span>' +
+        '<span class="upload-hint">카메라로 찍어 주세요</span>' +
+        '</span>';
+
+  var fileSelectInput = document.createElement("input");
+  fileSelectInput.type = "file";
+  fileSelectInput.id = "fileSelectInput";
+  fileSelectInput.accept = "image/*";
+  fileSelectInput.className = "upload-btn";
+  fileSelectInput.setAttribute("aria-hidden", "true");
+
+  var captureInput = document.createElement("input");
+  captureInput.type = "file";
+  captureInput.id = "captureInput";
+  captureInput.accept = "image/*;capture=camera";
+  captureInput.className = "upload-btn";
+  captureInput.setAttribute("aria-hidden", "true");
+
   var hint = document.getElementById("hint");
   var status = document.getElementById("status");
   var resultCard = document.getElementById("resultCard");
-  var result = document.getElementById("result");
-  var sourceNote = document.getElementById("sourceNote");
   var errCard = document.getElementById("errCard");
   var printBtn = document.getElementById("printBtn");
   var resetBtn = document.getElementById("resetBtn");
   var isProcessing = false;
   var reviewState = null;
+  var previewBtn = document.getElementById("previewBtn");
+  var backToEditBtn = document.getElementById("backToEditBtn");
+  var resultTrack = document.getElementById("resultTrack");
+  var resultNav = document.getElementById("resultNav");
+  var confirmedStatus = document.getElementById("confirmedStatus");
+  var draftCard = document.getElementById("draftCard");
+  var shareBtn = document.getElementById("shareBtn");
+  var copyBtn = document.getElementById("copyBtn");
+  var shareStatus = document.getElementById("shareStatus");
+  var sharePreview = document.getElementById("sharePreview");
+  var sharePreviewText = document.getElementById("sharePreviewText");
+  var copyFallback = document.getElementById("copyFallback");
+  var copyFallbackText = document.getElementById("copyFallbackText");
 
   function setProcessing(active) {
     isProcessing = active;
-    pick.disabled = active;
-    file.disabled = active;
+    fileSelectBtn.disabled = active;
+    captureBtn.disabled = active;
+    fileSelectInput.disabled = active;
+    captureInput.disabled = active;
     resetBtn.disabled = active;
-    pick.setAttribute("aria-busy", String(active));
+    fileSelectBtn.setAttribute("aria-busy", String(active));
+    captureBtn.setAttribute("aria-busy", String(active));
+  }
+
+  function setShareStatus(message) {
+    if (!shareStatus) return;
+    shareStatus.textContent = message || "";
+    shareStatus.style.display = message ? "block" : "none";
   }
 
   function hideAll() {
@@ -909,6 +1004,87 @@
     button.setAttribute("aria-expanded", "false");
   }
 
+  function processSelectedFile(file) {
+    if (isProcessing) return;
+    if (!file || !(file instanceof File)) {
+      return;
+    }
+
+    var type = file.type && file.type.toLowerCase();
+    if (type && type.indexOf("image/") !== 0) {
+      showErr("사진 파일만 사용할 수 있습니다.");
+      setProcessing(false);
+      return;
+    }
+
+    var size = file.size;
+    if (size && size > 50 * 1024 * 1024) {
+      showErr("사진 파일이 너무 큽니다. 다른 사진으로 시도해 주세요.");
+      setProcessing(false);
+      return;
+    }
+
+    setProcessing(true);
+    clearSourceImage();
+    clearMedicationDraft();
+    hideAll();
+    status.style.display = "block";
+
+    confirmedSchedule = null;
+    var resultCard = document.getElementById("resultCard");
+    var resultCards = document.getElementById("resultCards");
+    var sharePreview = document.getElementById("sharePreview");
+    var sharePreviewText = document.getElementById("sharePreviewText");
+    var copyFallback = document.getElementById("copyFallback");
+    var copyFallbackText = document.getElementById("copyFallbackText");
+    var shareBtn = document.getElementById("shareBtn");
+    var copyBtn = document.getElementById("copyBtn");
+    var printBtn = document.getElementById("printBtn");
+
+    if (resultCard) resultCard.style.display = "none";
+    if (resultCards) resultCards.replaceChildren();
+    if (sharePreview) sharePreview.style.display = "none";
+    if (sharePreviewText) sharePreviewText.textContent = "";
+    if (copyFallback) copyFallback.style.display = "none";
+    if (copyFallbackText) copyFallbackText.textContent = "";
+    if (shareBtn) shareBtn.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
+    if (printBtn) printBtn.disabled = true;
+
+    var reader = new FileReader();
+
+    reader.onload = function (e) {
+      Promise.resolve()
+        .then(function () {
+          showSourceImage(e.target.result);
+          return postSchedule(e.target.result);
+        })
+        .catch(function () {
+          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
+        })
+        .finally(function () {
+          setProcessing(false);
+        });
+    };
+
+    reader.onerror = function () {
+      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
+      setProcessing(false);
+    };
+
+    reader.onabort = function () {
+      showErr("사진 읽기가 취소됐습니다.");
+      setProcessing(false);
+    };
+
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
+      setProcessing(false);
+    }
+  }
+
   function createReviewState(draft) {
     var originalDraft = JSON.parse(JSON.stringify(draft));
 
@@ -947,83 +1123,127 @@
     return false;
   }
 
-  function medicationMissingItems(medication) {
+  function fieldMissingFromValues(values, key) {
+    var value = values[key];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return true;
+    }
+    return false;
+  }
+
+  function medicationMissingItems(medication, valuesOverride) {
+    var candidate = valuesOverride || medication;
+    var values = candidate.values;
+    var scheduleType = candidate.scheduleType;
+    var timeSlots = candidate.timeSlots;
+    var timingSource = candidate.timingSource;
+    var reviewId = medication.reviewId;
     var missing = [];
 
-    if (fieldMissing(medication, "name")) {
-      missing.push({ id: "name-" + medication.reviewId, text: "약 이름을 원본에서 확인해 주세요." });
+    if (fieldMissingFromValues(values, "name")) {
+      missing.push({ id: "name-" + reviewId, text: "약 이름을 원본에서 확인해 주세요." });
     }
-    if (fieldMissing(medication, "dose")) {
-      missing.push({ id: "dose-" + medication.reviewId, text: "1회 먹는 양을 원본에서 확인해 주세요." });
+    if (fieldMissingFromValues(values, "dose")) {
+      missing.push({ id: "dose-" + reviewId, text: "1회 먹는 양을 원본에서 확인해 주세요." });
     }
-    if (fieldMissing(medication, "timing")) {
-      missing.push({ id: "timing-" + medication.reviewId, text: "복용 시점·조건을 원본에서 확인해 주세요." });
-    }
-
-    if (medication.scheduleType === "unresolved") {
-      missing.push({ id: "type-" + medication.reviewId, text: "복용 유형을 선택해 주세요." });
+    if (fieldMissingFromValues(values, "timing")) {
+      missing.push({ id: "timing-" + reviewId, text: "복용 시점·조건을 원본에서 확인해 주세요." });
     }
 
-    if (medication.timingSource !== "original" && medication.timingSource !== "pharmacist") {
-      missing.push({ id: "timing-source-" + medication.reviewId, text: "복용 시점·시간대 확인 근거를 선택해 주세요." });
+    if (scheduleType === "unresolved") {
+      missing.push({ id: "type-" + reviewId, text: "복용 유형을 선택해 주세요." });
     }
 
-    if (medication.scheduleType === "daily") {
-      if (fieldMissing(medication, "frequency")) {
-        missing.push({ id: "frequency-" + medication.reviewId, text: "복용 횟수를 원본에서 확인해 주세요." });
+    if (timingSource !== "original" && timingSource !== "pharmacist" && timingSource !== "caregiver_acknowledged") {
+      missing.push({ id: "timing-source-" + reviewId, text: "복용 시점·시간대 확인 근거를 선택해 주세요." });
+    }
+
+    if (scheduleType === "daily") {
+      if (fieldMissingFromValues(values, "frequency")) {
+        missing.push({ id: "frequency-" + reviewId, text: "복용 횟수를 원본에서 확인해 주세요." });
       }
-      if (medication.timeSlots.length === 0) {
-        missing.push({ id: "slots-" + medication.reviewId, text: "원본이나 약사에게 확인한 시간대를 선택해 주세요." });
+      if (timeSlots.length === 0) {
+        missing.push({ id: "slots-" + reviewId, text: "원본이나 약사에게 확인한 시간대를 선택해 주세요." });
       }
     }
 
-    if (medication.values.duration && medication.values.duration.trim().length === 0) {
-      missing.push({ id: "duration-" + medication.reviewId, text: "며칠분이 비어 있습니다. 확인되지 않았으면 추측해서 입력하지 마세요." });
+    if (values.duration && values.duration.trim().length === 0) {
+      missing.push({ id: "duration-" + reviewId, text: "며칠분이 비어 있습니다. 확인되지 않았으면 추측해서 입력하지 마세요." });
     }
 
     return missing;
   }
 
-  function refreshArticleMissing(article, medication) {
+function refreshArticleMissing(article, medication) {
     if (!article || !medication) return;
 
     var missing = medicationMissingItems(medication);
-
+    var missingIds = {};
     missing.forEach(function (item) {
-      var input = article.querySelector('[id="' + item.id + '"]');
-      if (!input) return;
+      missingIds[item.id] = item;
+    });
 
-      var row = input.parentElement;
-      if (row && row.nodeName === "P") {
-        var existing = row.querySelector(".missing-message");
-        if (item.text) {
-          if (!existing) {
-            existing = document.createElement("p");
-            existing.className = "missing-message";
-            existing.style.color = "#B91C1C";
-            existing.style.fontSize = "13pt";
-            existing.style.fontWeight = "500";
-            existing.style.marginTop = "4px";
-            row.appendChild(existing);
-          }
-          existing.textContent = item.text;
-          input.setAttribute("aria-invalid", "true");
-          var describedBy = input.getAttribute("aria-describedby");
-          if (describedBy) {
-            input.setAttribute("aria-describedby", describedBy + " missing-message");
-          } else {
-            input.setAttribute("aria-describedby", "missing-message");
-          }
-          row.style.background = "#FEF2F2";
-          row.style.borderRadius = "8px";
-        } else {
-          if (existing) {
-            existing.remove();
-          }
-          input.removeAttribute("aria-invalid");
-          input.removeAttribute("aria-describedby");
-          row.style.background = "";
+    var fieldIds = [
+      "name-" + medication.reviewId,
+      "dose-" + medication.reviewId,
+      "timing-" + medication.reviewId,
+      "frequency-" + medication.reviewId,
+      "slots-" + medication.reviewId,
+      "duration-" + medication.reviewId,
+      "timing-source-" + medication.reviewId
+    ];
+
+    if (medication.scheduleType === "unresolved") {
+      fieldIds.push("type-" + medication.reviewId);
+    }
+
+    fieldIds.forEach(function (fieldId) {
+      var input = article.querySelector('[id="' + fieldId + '"]');
+      var item = missingIds[fieldId];
+      if (!input) {
+        if (item) {
+          var existing = document.querySelector('[id="' + fieldId + '-missing"]');
+          if (existing) existing.remove();
         }
+        return;
+      }
+
+      var wrapper = input.parentElement;
+      var existingMessage = wrapper.querySelector(".missing-message");
+      var describedBy = input.getAttribute("aria-describedby");
+      var existingDescId = describedBy ? describedBy.split(" ").filter(function (s) { return s && s.indexOf("missing") !== 0; }).join(" ") : "";
+
+      if (item) {
+        if (!existingMessage) {
+          existingMessage = document.createElement("div");
+          existingMessage.className = "missing-message";
+          existingMessage.style.color = "#B91C1C";
+          existingMessage.style.fontSize = "13pt";
+          existingMessage.style.fontWeight = "500";
+          existingMessage.style.marginTop = "4px";
+          wrapper.appendChild(existingMessage);
+        }
+        existingMessage.textContent = item.text;
+        existingMessage.id = fieldId + "-missing";
+        input.setAttribute("aria-invalid", "true");
+        var newDescId = existingDescId ? existingDescId + " " + (fieldId + "-missing") : (fieldId + "-missing");
+        input.setAttribute("aria-describedby", newDescId);
+        wrapper.style.background = "#FEF2F2";
+        wrapper.style.border = "2px solid #B91C1C";
+        wrapper.style.borderRadius = "8px";
+      } else {
+        if (existingMessage) {
+          existingMessage.remove();
+        }
+        input.removeAttribute("aria-invalid");
+        if (existingDescId) {
+          input.setAttribute("aria-describedby", existingDescId);
+        } else {
+          input.removeAttribute("aria-describedby");
+        }
+        wrapper.style.background = "";
+        wrapper.style.border = "";
+        wrapper.style.borderRadius = "";
       }
     });
 
@@ -1033,7 +1253,7 @@
       var existing = slotGroup.querySelector(".slots-missing");
       if (slotMissing) {
         if (!existing) {
-          existing = document.createElement("p");
+          existing = document.createElement("div");
           existing.className = "slots-missing";
           existing.style.color = "#B91C1C";
           existing.style.fontSize = "13pt";
@@ -1056,13 +1276,13 @@
       }
     }
 
-    var confirmLabel = article.querySelector(".touch-checkbox-label");
+    var confirmLabel = article.querySelector(".medication-confirm-label");
     if (confirmLabel) {
       var confirmMissing = medicationMissingItems(medication).length > 0;
       var existing = confirmLabel.querySelector(".confirm-missing");
       if (confirmMissing) {
         if (!existing) {
-          existing = document.createElement("p");
+          existing = document.createElement("div");
           existing.className = "confirm-missing";
           existing.style.color = "#B91C1C";
           existing.style.fontSize = "13pt";
@@ -1130,25 +1350,12 @@
   }
 
   function buildConfirmedSchedule(reviewState) {
-    if (!reviewState || !reviewState.medications || reviewState.medications.length === 0) {
+    if (!canShowConfirmedSchedule()) {
       return null;
     }
 
-    var medications = reviewState.medications.filter(function (medication) {
-      return medication.confirmed === true;
-    });
-
-    if (medications.length === 0) {
-      return null;
-    }
-
-    var morning = [];
-    var noon = [];
-    var evening = [];
-    var others = [];
-
-    medications.forEach(function (medication) {
-      var m = {
+    var medications = reviewState.medications.map(function (medication) {
+      return {
         id: medication.id,
         reviewId: medication.reviewId,
         name: medication.values.name || "",
@@ -1160,38 +1367,39 @@
         timeSlots: medication.timeSlots.slice(),
         timingSource: medication.timingSource
       };
+    });
 
-      if (medication.scheduleType === "unresolved") {
-        others.push(m);
-        return;
-      }
+    var morning = [];
+    var noon = [];
+    var evening = [];
+    var others = [];
 
-      if (medication.scheduleType === "as_needed") {
-        others.push(m);
-        return;
-      }
-
-      if (medication.scheduleType === "non_daily") {
-        others.push(m);
-        return;
-      }
-
+    medications.forEach(function (medication) {
       if (medication.scheduleType === "daily") {
         if (medication.timeSlots.length === 0) {
+          others.push(medication);
           return;
         }
 
         medication.timeSlots.forEach(function (slot) {
           if (slot === "morning") {
-            morning.push(m);
+            morning.push(medication);
           } else if (slot === "noon") {
-            noon.push(m);
+            noon.push(medication);
           } else if (slot === "evening") {
-            evening.push(m);
+            evening.push(medication);
+          } else if (slot === "bedtime") {
+            others.push(medication);
           } else {
-            others.push(m);
+            others.push(medication);
           }
         });
+      } else if (medication.scheduleType === "as_needed") {
+        others.push(medication);
+      } else if (medication.scheduleType === "non_daily") {
+        others.push(medication);
+      } else {
+        others.push(medication);
       }
     });
 
@@ -1199,8 +1407,7 @@
       morning: morning,
       noon: noon,
       evening: evening,
-      others: others,
-      reviewState: reviewState
+      others: others
     };
   }
 
@@ -1234,6 +1441,14 @@
     var status = document.getElementById("confirmedStatus");
     var previewBtn = document.getElementById("previewBtn");
     var printBtn = document.getElementById("printBtn");
+    var shareBtn = document.getElementById("shareBtn");
+    var copyBtn = document.getElementById("copyBtn");
+    var resultCard = document.getElementById("resultCard");
+    var resultCards = document.getElementById("resultCards");
+    var sharePreview = document.getElementById("sharePreview");
+    var sharePreviewText = document.getElementById("sharePreviewText");
+    var copyFallback = document.getElementById("copyFallback");
+    var copyFallbackText = document.getElementById("copyFallbackText");
 
     if (!status || !previewBtn || !printBtn) {
       return;
@@ -1243,6 +1458,15 @@
       status.textContent = "약별 초안이 없습니다.";
       previewBtn.disabled = true;
       printBtn.disabled = true;
+      if (shareBtn) shareBtn.disabled = true;
+      if (copyBtn) copyBtn.disabled = true;
+      if (resultCard) resultCard.style.display = "none";
+      if (resultCards) resultCards.replaceChildren();
+      if (sharePreview) sharePreview.style.display = "none";
+      if (sharePreviewText) sharePreviewText.textContent = "";
+      if (copyFallback) copyFallback.style.display = "none";
+      if (copyFallbackText) copyFallbackText.textContent = "";
+      confirmedSchedule = null;
       return;
     }
 
@@ -1258,6 +1482,15 @@
       status.textContent = "약 " + reviewState.medications.length + "개 중 " + confirmed + "개 대조 완료. 누락이 없고 전체 확인까지 마쳐야 시간표를 볼 수 있습니다.";
       previewBtn.disabled = true;
       printBtn.disabled = true;
+      if (shareBtn) shareBtn.disabled = true;
+      if (copyBtn) copyBtn.disabled = true;
+      if (resultCard) resultCard.style.display = "none";
+      if (resultCards) resultCards.replaceChildren();
+      if (sharePreview) sharePreview.style.display = "none";
+      if (sharePreviewText) sharePreviewText.textContent = "";
+      if (copyFallback) copyFallback.style.display = "none";
+      if (copyFallbackText) copyFallbackText.textContent = "";
+      confirmedSchedule = null;
       return;
     }
 
@@ -1273,9 +1506,13 @@
     var message = document.getElementById("documentReviewStatus");
 
     if (!reviewState || !reviewState.medications.length) {
-      box.checked = false;
-      box.disabled = true;
-      message.textContent = "약별 대조 확인을 먼저 진행해 주세요.";
+      if (box) {
+        box.checked = false;
+        box.disabled = true;
+      }
+      if (message) {
+        message.textContent = "약별 대조 확인을 먼저 진행해 주세요.";
+      }
       return;
     }
 
@@ -1290,24 +1527,25 @@
       reviewState.documentConfirmed = false;
     }
 
-    box.disabled = !ready;
-    box.checked = ready && reviewState.documentConfirmed === true;
+    if (box) {
+      box.disabled = !ready;
+      if (!updatingDocumentReview) {
+        box.checked = ready && reviewState.documentConfirmed === true;
+      }
+    }
 
-    message.textContent = box.checked
-      ? "전체 대조 확인을 표시했습니다. 내용을 수정하면 확인이 해제됩니다."
-      : "약 " + total + "개 중 " + confirmed + "개 대조 완료. " +
-        (ready
-          ? "누락된 약과 문서 확인 사항까지 검토한 뒤 전체 확인을 선택해 주세요."
-          : "각 약의 대조 확인을 먼저 완료해 주세요.");
+    if (message) {
+      message.textContent = box.checked
+        ? "전체 대조 확인을 표시했습니다. 내용을 수정하면 확인이 해제됩니다."
+        : "약 " + total + "개 중 " + confirmed + "개 대조 완료. " +
+          (ready
+            ? "누락된 약과 문서 확인 사항까지 검토한 뒤 전체 확인을 선택해 주세요."
+            : "각 약의 대조 확인을 먼저 완료해 주세요.");
+    }
   }
 
   function renderConfirmedSchedule(schedule) {
     if (!schedule) {
-      return;
-    }
-
-    var result = document.getElementById("result");
-    if (!result) {
       return;
     }
 
@@ -1338,7 +1576,7 @@
     }
 
     var other = schedule.others.filter(function (m) {
-      return m.scheduleType === "bedtime" || m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved";
+      return m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved" || (m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1);
     });
 
     var bedtime = other.filter(function (m) {
@@ -1423,16 +1661,74 @@
           nameEl.textContent = m.name;
           item.appendChild(nameEl);
 
-          var detailed = [];
-          if (m.dose) detailed.push("<span>1회량: </span>" + m.dose);
-          if (m.timing) detailed.push("<span>복용 조건: </span>" + m.timing);
-          if (m.frequency) detailed.push("<span>복용 횟수: </span>" + m.frequency);
-          if (m.duration) detailed.push("<span>며칠분: </span>" + m.duration);
-
-          if (detailed.length > 0) {
+          if (m.dose || m.timing || m.frequency || m.duration) {
             var detailedEl = document.createElement("div");
             detailedEl.className = "result-card-page-med-detailed";
-            detailedEl.innerHTML = detailed.join("  ·  ");
+
+            if (m.dose) {
+              var labelSpan = document.createElement("span");
+              labelSpan.className = "result-card-page-med-detailed-label";
+              labelSpan.textContent = "1회량: ";
+              var valueSpan = document.createElement("span");
+              valueSpan.className = "result-card-page-med-detailed-value";
+              valueSpan.textContent = m.dose;
+              detailedEl.appendChild(labelSpan);
+              detailedEl.appendChild(valueSpan);
+
+              var separator = document.createElement("span");
+              separator.className = "result-card-page-med-detailed-separator";
+              separator.textContent = "  ·  ";
+              detailedEl.appendChild(separator);
+            }
+
+            if (m.timing) {
+              var labelSpan = document.createElement("span");
+              labelSpan.className = "result-card-page-med-detailed-label";
+              labelSpan.textContent = "복용 조건: ";
+              var valueSpan = document.createElement("span");
+              valueSpan.className = "result-card-page-med-detailed-value";
+              valueSpan.textContent = m.timing;
+              detailedEl.appendChild(labelSpan);
+              detailedEl.appendChild(valueSpan);
+
+              var separator = document.createElement("span");
+              separator.className = "result-card-page-med-detailed-separator";
+              separator.textContent = "  ·  ";
+              detailedEl.appendChild(separator);
+            }
+
+            if (m.frequency) {
+              var labelSpan = document.createElement("span");
+              labelSpan.className = "result-card-page-med-detailed-label";
+              labelSpan.textContent = "복용 횟수: ";
+              var valueSpan = document.createElement("span");
+              valueSpan.className = "result-card-page-med-detailed-value";
+              valueSpan.textContent = m.frequency;
+              detailedEl.appendChild(labelSpan);
+              detailedEl.appendChild(valueSpan);
+
+              var separator = document.createElement("span");
+              separator.className = "result-card-page-med-detailed-separator";
+              separator.textContent = "  ·  ";
+              detailedEl.appendChild(separator);
+            }
+
+            if (m.duration) {
+              var labelSpan = document.createElement("span");
+              labelSpan.className = "result-card-page-med-detailed-label";
+              labelSpan.textContent = "며칠분: ";
+              var valueSpan = document.createElement("span");
+              valueSpan.className = "result-card-page-med-detailed-value";
+              valueSpan.textContent = m.duration;
+              detailedEl.appendChild(labelSpan);
+              detailedEl.appendChild(valueSpan);
+            }
+
+            var lastChild = detailedEl.lastChild;
+            if (lastChild && lastChild.className === "result-card-page-med-detailed-separator") {
+              detailedEl.removeChild(lastChild);
+            }
+
             item.appendChild(detailedEl);
           }
 
@@ -1444,12 +1740,166 @@
       pages.push(page);
     }
 
+    function addOtherPage(bedtime, asNeeded, nonDaily, unresolved) {
+      var page = document.createElement("div");
+      page.className = "result-card-page";
+      page.setAttribute("role", "region");
+
+      var titleEl = document.createElement("h3");
+      titleEl.className = "result-card-page-title";
+      titleEl.textContent = "그 외";
+      page.appendChild(titleEl);
+
+      var listEl = document.createElement("div");
+      listEl.className = "result-card-page-list";
+
+      var hasAny = bedtime.length > 0 || asNeeded.length > 0 || nonDaily.length > 0 || unresolved.length > 0;
+
+      if (!hasAny) {
+        var emptyEl = document.createElement("p");
+        emptyEl.className = "result-card-page-empty";
+        emptyEl.textContent = "확인한 시간표에 등록된 약이 없습니다";
+        listEl.appendChild(emptyEl);
+      } else {
+        if (bedtime.length > 0) {
+          var bedtimeSub = document.createElement("p");
+          bedtimeSub.className = "result-card-page-sub";
+          bedtimeSub.textContent = "자기 전";
+          listEl.appendChild(bedtimeSub);
+
+          bedtime.forEach(function (m) {
+            var item = document.createElement("div");
+            item.className = "result-card-page-med";
+
+            var nameEl = document.createElement("div");
+            nameEl.className = "result-card-page-med-name";
+            nameEl.textContent = m.name;
+            item.appendChild(nameEl);
+
+            var detailed = [];
+            if (m.dose) detailed.push("1회량: " + m.dose);
+            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
+            if (m.duration) detailed.push("며칠분: " + m.duration);
+
+            if (detailed.length > 0) {
+              var detailedEl = document.createElement("div");
+              detailedEl.className = "result-card-page-med-detailed";
+              detailedEl.textContent = detailed.join("  ·  ");
+              item.appendChild(detailedEl);
+            }
+
+            listEl.appendChild(item);
+          });
+        }
+
+        if (asNeeded.length > 0) {
+          var asNeededSub = document.createElement("p");
+          asNeededSub.className = "result-card-page-sub";
+          asNeededSub.textContent = "필요할 때만 먹는 약";
+          listEl.appendChild(asNeededSub);
+
+          asNeeded.forEach(function (m) {
+            var item = document.createElement("div");
+            item.className = "result-card-page-med";
+
+            var nameEl = document.createElement("div");
+            nameEl.className = "result-card-page-med-name";
+            nameEl.textContent = m.name;
+            item.appendChild(nameEl);
+
+            var detailed = [];
+            if (m.dose) detailed.push("1회량: " + m.dose);
+            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
+            if (m.duration) detailed.push("며칠분: " + m.duration);
+
+            if (detailed.length > 0) {
+              var detailedEl = document.createElement("div");
+              detailedEl.className = "result-card-page-med-detailed";
+              detailedEl.textContent = detailed.join("  ·  ");
+              item.appendChild(detailedEl);
+            }
+
+            listEl.appendChild(item);
+          });
+        }
+
+        if (nonDaily.length > 0) {
+          var nonDailySub = document.createElement("p");
+          nonDailySub.className = "result-card-page-sub";
+          nonDailySub.textContent = "매일 먹지 않는 약";
+          listEl.appendChild(nonDailySub);
+
+          nonDaily.forEach(function (m) {
+            var item = document.createElement("div");
+            item.className = "result-card-page-med";
+
+            var nameEl = document.createElement("div");
+            nameEl.className = "result-card-page-med-name";
+            nameEl.textContent = m.name;
+            item.appendChild(nameEl);
+
+            var detailed = [];
+            if (m.dose) detailed.push("1회량: " + m.dose);
+            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
+            if (m.duration) detailed.push("며칠분: " + m.duration);
+
+            if (detailed.length > 0) {
+              var detailedEl = document.createElement("div");
+              detailedEl.className = "result-card-page-med-detailed";
+              detailedEl.textContent = detailed.join("  ·  ");
+              item.appendChild(detailedEl);
+            }
+
+            listEl.appendChild(item);
+          });
+        }
+
+        if (unresolved.length > 0) {
+          var unresolvedSub = document.createElement("p");
+          unresolvedSub.className = "result-card-page-sub";
+          unresolvedSub.textContent = "복용 유형 확인 필요";
+          listEl.appendChild(unresolvedSub);
+
+          unresolved.forEach(function (m) {
+            var item = document.createElement("div");
+            item.className = "result-card-page-med";
+
+            var nameEl = document.createElement("div");
+            nameEl.className = "result-card-page-med-name";
+            nameEl.textContent = m.name;
+            item.appendChild(nameEl);
+
+            var detailed = [];
+            if (m.dose) detailed.push("1회량: " + m.dose);
+            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
+            if (m.duration) detailed.push("며칠분: " + m.duration);
+
+            if (detailed.length > 0) {
+              var detailedEl = document.createElement("div");
+              detailedEl.className = "result-card-page-med-detailed";
+              detailedEl.textContent = detailed.join("  ·  ");
+              item.appendChild(detailedEl);
+            }
+
+            listEl.appendChild(item);
+          });
+        }
+      }
+
+      page.appendChild(listEl);
+      pages.push(page);
+    }
+
     addPage("아침", null, schedule.morning, "확인한 시간표에 등록된 약이 없습니다");
     addPage("점심", null, schedule.noon, "확인한 시간표에 등록된 약이 없습니다");
     addPage("저녁", null, schedule.evening, "확인한 시간표에 등록된 약이 없습니다");
 
     var others = schedule.others.filter(function (m) {
-      return m.scheduleType === "bedtime" || m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved";
+      return m.scheduleType === "as_needed" || m.scheduleType === "non_daily" || m.scheduleType === "unresolved" || (m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1);
     });
 
     var bedtime = others.filter(function (m) {
@@ -1465,10 +1915,7 @@
       return m.scheduleType === "unresolved";
     });
 
-    addPage("자기 전", "복용 시점을 확인한 약", bedtime, "확인한 시간대(자기 전)의 약이 없습니다");
-    addPage("필요할 때만 먹는 약", "필요할 때만 복용하는 약", asNeeded, "필요할 때만 먹는 약이 없습니다");
-    addPage("매일 먹지 않는 약", "매일 먹지 않는 약", nonDaily, "매일 먹지 않는 약이 없습니다");
-    addPage("복용 유형 확인 필요", "복용 유형 확인이 필요한 약", unresolved, "복용 유형 확인이 필요한 약이 없습니다");
+    addOtherPage(bedtime, asNeeded, nonDaily, unresolved);
 
     var resultCards = document.getElementById("resultCards");
     if (!resultCards) {
@@ -1493,6 +1940,8 @@
     if (totalPages > 0) {
       scrollToResultPage(1, totalPages);
     }
+
+    updateResultNav();
 
     document.getElementById("resultCard").style.display = "block";
     document.getElementById("confirmedStatus").textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
@@ -1542,6 +1991,64 @@
     }
   }
 
+  var currentPageIndex = 0;
+
+  function updateResultPosition(total) {
+    var positionEl = document.getElementById("resultPosition");
+    if (!positionEl || total < 1) {
+      return;
+    }
+    var idx = currentPageIndex >= 1 && currentPageIndex <= total ? currentPageIndex : 1;
+    positionEl.textContent = idx + " / " + total;
+  }
+
+  function getCurrentPageIndex(total) {
+    var resultTrack = document.getElementById("resultTrack");
+    if (!resultTrack || total < 1) {
+      return 1;
+    }
+    var children = resultTrack.children;
+    if (!children || children.length === 0) {
+      return 1;
+    }
+    var halfWidth = resultTrack.clientWidth / 2;
+    var center = resultTrack.scrollLeft + halfWidth;
+    var bestIndex = 1;
+    var bestDist = Math.abs(children[0].offsetLeft + children[0].offsetWidth / 2 - center);
+    for (var i = 1; i < children.length; i++) {
+      var dist = Math.abs(children[i].offsetLeft + children[i].offsetWidth / 2 - center);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIndex = i + 1;
+      }
+    }
+    return bestIndex;
+  }
+
+  function goToResultPage(index, total) {
+    if (!total || index < 1) {
+      index = 1;
+    }
+    if (index > total) {
+      index = total;
+    }
+    currentPageIndex = index;
+    scrollToResultPage(index, total);
+    updateResultPosition(total);
+    updateResultNavButtons(total);
+  }
+
+  function updateResultNavButtons(total) {
+    var prevBtn = document.getElementById("resultPrevBtn");
+    var nextBtn = document.getElementById("resultNextBtn");
+    if (prevBtn) {
+      prevBtn.disabled = currentPageIndex <= 1;
+    }
+    if (nextBtn) {
+      nextBtn.disabled = currentPageIndex >= total;
+    }
+  }
+
   function updateResultNav() {
     var resultTrack = document.getElementById("resultTrack");
     var resultCards = document.getElementById("resultCards");
@@ -1553,22 +2060,14 @@
     var children = resultCards.children;
     var total = children.length;
     if (total === 0) {
+      currentPageIndex = 0;
       return;
     }
 
-    var resultTrackRect = resultTrack.getBoundingClientRect();
-    var currentLeft = resultTrack.scrollLeft + resultTrackRect.width / 2;
-
-    var bestIndex = 1;
-    for (var i = 0; i < total; i++) {
-      var child = children[i];
-      var childCenter = child.offsetLeft + child.offsetWidth / 2;
-      if (Math.abs(childCenter - currentLeft) < Math.abs((children[bestIndex] ? children[bestIndex].offsetLeft + children[bestIndex].offsetWidth / 2 : 0) - currentLeft)) {
-        bestIndex = i + 1;
-      }
-    }
-
-    scrollToResultPage(bestIndex, total);
+    var index = getCurrentPageIndex(total);
+    currentPageIndex = index;
+    updateResultPosition(total);
+    updateResultNavButtons(total);
   }
 
   function renderMedicationDraft(draft) {
@@ -1895,7 +2394,14 @@
             });
 
             medication.timingSource = null;
+            var sourceControl =
+              article.querySelector(".medication-timing-source");
+            if (sourceControl) {
+              sourceControl.value = "";
+            }
+
             medication.confirmed = false;
+            nextReviewState.documentConfirmed = false;
 
             var confirmation = article.querySelector(".medication-confirm");
             if (confirmation) {
@@ -1907,17 +2413,11 @@
               notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
             }
 
-            var sourceControl =
-              article.querySelector(".medication-timing-source");
-            if (sourceControl) {
-              sourceControl.value = "";
-            }
+            refreshArticleMissing(article, medication);
 
             updateDocumentReview();
-
-            nextReviewState.documentConfirmed = false;
-
-            refreshArticleMissing(article, medication);
+            refreshConfirmedPreview();
+            updateShareButtonsIfReady();
 
             timeEl.textContent = "시간대: " + (
               medication.timeSlots.length
@@ -1950,7 +2450,8 @@
         [
           ["", "아직 확인하지 못함"],
           ["original", "원본에 명시된 내용을 직접 확인함"],
-          ["pharmacist", "약사에게 직접 확인함"]
+          ["pharmacist", "약사에게 직접 확인함"],
+          ["caregiver_acknowledged", "보호자가 입력 내용과 선택 시간대를 확인함"]
         ].forEach(function (item) {
           var option = document.createElement("option");
           option.value = item[0];
@@ -1978,6 +2479,7 @@
               : null;
 
           medication.confirmed = false;
+          nextReviewState.documentConfirmed = false;
 
           var confirmation = article.querySelector(".medication-confirm");
           if (confirmation) {
@@ -1989,25 +2491,17 @@
             notice.textContent = "내용이 변경되어 다시 대조해야 합니다.";
           }
 
-          updateDocumentReview();
-
           refreshArticleMissingForCurrentDraft();
+          updateDocumentReview();
           refreshConfirmedPreview();
-
-          nextReviewState.documentConfirmed = false;
+          updateShareButtonsIfReady();
         });
-
-        var sourceHint = document.createElement("p");
-        sourceHint.textContent =
-          "이 약의 복용 시점·조건과 선택한 시간대를 확인한 경우에만 고르세요. AI가 읽은 근거만 보고 확인 완료로 선택하지 마세요.";
-        sourceHint.style.marginTop = "8px";
 
         article.appendChild(sourceLabel);
         article.appendChild(sourceSelect);
-        article.appendChild(sourceHint);
 
         var confirmLabel = document.createElement("label");
-        confirmLabel.className = "touch-checkbox-label";
+        confirmLabel.className = "touch-checkbox-label medication-confirm-label";
         confirmLabel.style.display = "flex";
         confirmLabel.style.alignItems = "flex-start";
         confirmLabel.style.marginTop = "20px";
@@ -2016,7 +2510,7 @@
 
         var confirmBox = document.createElement("input");
         confirmBox.type = "checkbox";
-        confirmBox.className = "touch-checkbox";
+        confirmBox.className = "touch-checkbox medication-confirm";
         confirmBox.checked = false;
 
         var confirmSpan = document.createElement("span");
@@ -2033,105 +2527,89 @@
         confirmBox.addEventListener("change", function () {
           if (reviewState !== nextReviewState) return;
 
-          nextReviewState.documentConfirmed = false;
-
           if (!confirmBox.checked) {
             medication.confirmed = false;
+            nextReviewState.documentConfirmed = false;
             confirmNotice.textContent = "확인을 해제했습니다.";
+            refreshArticleMissingForCurrentDraft();
             updateDocumentReview();
+            refreshConfirmedPreview();
+            updateShareButtonsIfReady();
             return;
           }
 
-          var missing = [];
+          var candidate = {
+            values: Object.assign({}, medication.values),
+            scheduleType: medication.scheduleType,
+            timeSlots: medication.timeSlots.slice(),
+            timingSource: "caregiver_acknowledged"
+          };
 
-          [
-            ["name", "약 이름"],
-            ["dose", "1회 먹는 양"],
-            ["frequency", "복용 횟수"],
-            ["timing", "복용 시점"],
-            ["duration", "며칠분"]
-          ].forEach(function (entry) {
-            var field = med[entry[0]];
-            if (
-              !field ||
-              !["found", "unresolved"].includes(field.status) ||
-              (field.value !== null && typeof field.value !== "string") ||
-              (field.evidence !== null && typeof field.evidence !== "string") ||
-              (field.status === "found" &&
-                (!field.value || !field.value.trim() ||
-                 !field.evidence || !field.evidence.trim()))
-            ) {
-              throw new Error("invalid field");
-            }
+          var candidateMissing = medicationMissingItems(medication, candidate);
 
-            var missingItem = field.status === "found"
-              ? field.value
-              : null;
-
-            if (!missingItem || !missingItem.trim()) {
-              missing.push(entry[1] + "를(을) 확인하지 못했습니다.");
-            }
-          });
-
-          if (missing.length > 0) {
+          if (candidateMissing.length > 0) {
             confirmBox.checked = false;
             medication.confirmed = false;
-            confirmNotice.textContent = "확인하지 못한 내용이 있습니다: " + missing.join("; ");
+            nextReviewState.documentConfirmed = false;
+            confirmNotice.textContent =
+              "먼저 확인해 주세요: " + candidateMissing.map(function (item) { return item.text; }).join(", ");
+            refreshArticleMissingForCurrentDraft();
             updateDocumentReview();
-            return;
-          }
+            refreshConfirmedPreview();
+            updateShareButtonsIfReady();
 
-          var emptySlots = [];
-          if (medication.scheduleType === "daily") {
-            var slotNames = {
-              morning: "아침",
-              noon: "점심",
-              evening: "저녁",
-              bedtime: "자기 전"
-            };
-            medication.timeSlots.forEach(function (slot) {
-              if (!slotNames[slot]) {
-                emptySlots.push(slot);
+            var firstMissingInput = null;
+            for (var i = 0; i < candidateMissing.length; i++) {
+              var input = article.querySelector('[data-review-id="' + medication.reviewId + '"] [id="' + candidateMissing[i].id + '"]');
+              if (input && typeof input.focus === "function") {
+                firstMissingInput = input;
+                break;
               }
-            });
-          }
-
-          if (emptySlots.length > 0) {
-            confirmBox.checked = false;
-            medication.confirmed = false;
-            confirmNotice.textContent = "확인되지 않은 시간대가 있습니다.";
-            updateDocumentReview();
+            }
+            if (firstMissingInput) {
+              try { firstMissingInput.focus(); } catch (e) {}
+            }
             return;
           }
 
-          if (medication.timingSource !== "original" && medication.timingSource !== "pharmacist") {
-            confirmBox.checked = false;
-            medication.confirmed = false;
-            confirmNotice.textContent = "복용 시점·시간대 확인 근거가 선택되지 않았습니다.";
-            updateDocumentReview();
-            return;
+          medication.values = Object.assign(medication.values, candidate.values);
+          medication.timingSource = "caregiver_acknowledged";
+          if (sourceSelect) {
+            sourceSelect.value = "caregiver_acknowledged";
           }
-
           medication.confirmed = true;
-          confirmNotice.textContent = "확인 완료.";
-          updateDocumentReview();
+          nextReviewState.documentConfirmed = false;
+          confirmNotice.textContent =
+            "사용자가 대조했음을 표시했습니다. 내용을 수정하면 확인이 해제됩니다.";
+
           refreshArticleMissingForCurrentDraft();
+          updateDocumentReview();
+          refreshConfirmedPreview();
+          updateShareButtonsIfReady();
         });
 
-        article.appendChild(confirmLabel);
-        article.appendChild(confirmBox);
-        article.appendChild(confirmSpan);
-        article.appendChild(confirmNotice);
+        confirmLabel.appendChild(confirmBox);
+        confirmLabel.appendChild(document.createTextNode(
+          "약 이름·1회량·횟수·복용 시점·조건을 원본과 대조했고, 불명확한 내용은 약사에게 확인했습니다."
+        ));
 
+        article.appendChild(confirmLabel);
+        article.appendChild(confirmNotice);
         fragment.appendChild(article);
       });
 
-      card.appendChild(fragment);
-      card.style.display = "block";
-      list.replaceChildren();
-      issues.replaceChildren();
-      resultCard.style.display = "none";
+      var issueFragment = document.createDocumentFragment();
+      draft.document_issues.forEach(function (issue) {
+        if (typeof issue !== "string") {
+          throw new Error("invalid issue");
+        }
+        var p = document.createElement("p");
+        p.textContent = "확인 사항: " + issue;
+        issueFragment.appendChild(p);
+      });
 
+      list.appendChild(fragment);
+      issues.appendChild(issueFragment);
       reviewState = nextReviewState;
       refreshArticleMissingForCurrentDraft();
       refreshConfirmedPreview();
@@ -2140,75 +2618,236 @@
       card.style.lineHeight = "1.6";
       errCard.style.display = "none";
       status.style.display = "none";
-
-    } catch (err) {
-      card.style.display = "none";
+      card.style.display = "block";
+    } catch (error) {
+      reviewState = null;
       list.replaceChildren();
       issues.replaceChildren();
-      resultCard.style.display = "none";
-
-      var errorBox = document.createElement("div");
-      errorBox.className = "error-card";
-      errorBox.setAttribute("role", "alert");
-      errorBox.textContent = "약별 초안을 확인하지 못했습니다. 다시 시도해 주세요.";
-
-      errCard.replaceChildren(errorBox);
-      errCard.style.display = "block";
-      status.style.display = "none";
-      reviewState = null;
+      card.style.display = "none";
+      showErr("약별 초안 형식을 확인하지 못했습니다.");
     }
   }
 
-  pick.addEventListener("click", function () {
-    if (isProcessing) return;
-    file.click();
-  });
+  function postSchedule(dataUrl) {
+    return (
+      fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_b64: dataUrl })
+      })
+        .then(function (r) {
+          if (!r.ok) {
+            throw new Error("초안 요청 실패");
+          }
+          return r.json();
+        })
+        .then(function (json) {
+          status.style.display = "none";
 
-  file.addEventListener("change", function () {
-    if (!file.files || file.files.length === 0) return;
+          if (!json || typeof json !== "object" || Array.isArray(json)) {
+            showErr("약별 초안 응답을 확인하지 못했습니다.");
+            return;
+          }
 
-    var reader = new FileReader();
+          if (json.error) {
+            showErr("약별 초안을 만들지 못했습니다. 다시 시도해 주세요.");
+            return;
+          }
 
-    setProcessing(true);
-    status.style.display = "block";
-    errCard.style.display = "none";
-    resultCard.style.display = "none";
-    resultCard.querySelector("#result").textContent = "";
+          if (!json.draft) {
+            showErr("약별 초안이 없습니다. 다시 시도해 주세요.");
+            return;
+          }
 
-    reader.onload = function () {
-      var dataUrl = reader.result;
+          renderMedicationDraft(json.draft);
+        })
+        .catch(function () {
+          status.style.display = "none";
+          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
+        })
+    );
+  }
 
-      setProcessing(false);
-      status.style.display = "none";
-      errCard.style.display = "none";
+  function placeUploadButtons() {
+    var uploadCard = document.querySelector(".upload-card");
+    if (!uploadCard) {
+      return;
+    }
 
-      if (!dataUrl) {
-        showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
-        return;
+    var existingLabel = document.getElementById("pick");
+    if (existingLabel) {
+      existingLabel.remove();
+    }
+
+    var labelWrap = document.createElement("div");
+    labelWrap.className = "upload-label-wrap";
+
+    labelWrap.appendChild(fileSelectBtn);
+    labelWrap.appendChild(captureBtn);
+    uploadCard.insertBefore(labelWrap, uploadCard.firstChild);
+
+    uploadCard.appendChild(fileSelectInput);
+    uploadCard.appendChild(captureInput);
+
+    fileSelectInput.accept = "image/*";
+    captureInput.accept = "image/*";
+    captureInput.setAttribute("capture", "environment");
+
+    fileSelectBtn.addEventListener("click", function () {
+      if (isProcessing) return;
+      fileSelectInput.value = "";
+      fileSelectInput.click();
+    });
+
+    captureBtn.addEventListener("click", function () {
+      if (isProcessing) return;
+      captureInput.value = "";
+      captureInput.click();
+    });
+
+    fileSelectInput.addEventListener("change", function () {
+      if (isProcessing) return;
+      var selected = fileSelectInput.files && fileSelectInput.files[0];
+      if (selected) processSelectedFile(selected);
+    });
+
+    captureInput.addEventListener("change", function () {
+      if (isProcessing) return;
+      var selected = captureInput.files && captureInput.files[0];
+      if (selected) processSelectedFile(selected);
+    });
+
+    fileSelectInput.style.display = "none";
+    captureInput.style.display = "none";
+
+    fileSelectBtn.style.minHeight = "48px";
+    captureBtn.style.minHeight = "48px";
+    fileSelectBtn.style.width = "100%";
+    captureBtn.style.width = "100%";
+    fileSelectBtn.style.display = "flex";
+    captureBtn.style.display = "flex";
+    fileSelectBtn.style.flexDirection = "column";
+    captureBtn.style.flexDirection = "column";
+    fileSelectBtn.style.alignItems = "center";
+    captureBtn.style.alignItems = "center";
+    fileSelectBtn.style.justifyContent = "center";
+    captureBtn.style.justifyContent = "center";
+  }
+
+  placeUploadButtons();
+
+  previewBtn.addEventListener("click", function () {
+    if (!canShowConfirmedSchedule()) {
+      var message = document.getElementById("documentReviewStatus");
+      if (message) {
+        message.textContent = "아직 큰 글씨 시간표를 볼 수 없습니다. 먼저 모든 약의 대조 확인을 완료해 주세요.";
       }
+      return;
+    }
 
-      showSourceImage(dataUrl);
-      postSchedule(dataUrl);
-    };
+    var schedule = buildConfirmedSchedule(reviewState);
+    if (!schedule) {
+      var message = document.getElementById("documentReviewStatus");
+      if (message) {
+        message.textContent = "큰 글씨 시간표를 준비하지 못했습니다.";
+      }
+      return;
+    }
 
-    reader.onerror = function () {
-      setProcessing(false);
-      status.style.display = "none";
-      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
-    };
-
-    reader.readAsDataURL(file.files[0]);
+    confirmedSchedule = schedule;
+    renderConfirmedSchedule(confirmedSchedule);
   });
 
-  resetBtn.addEventListener("click", function () {
-    if (isProcessing) return;
-    clearSourceImage();
-    file.value = "";
-    hideAll();
-    refreshConfirmedPreview();
-    updateResultAfterButtons();
-    result.textContent = "";
-    sourceNote.textContent = "";
+  printBtn.addEventListener("click", function () {
+    window.print();
+  });
+
+  backToEditBtn.addEventListener("click", function () {
+    resultCard.style.display = "none";
+    resultTrack.style.display = "none";
+    resultNav.style.display = "none";
+    confirmedStatus.textContent = "";
+    document.getElementById("resultCards").replaceChildren();
+    clearShareUI();
+    draftCard.style.display = "block";
+  });
+
+  document.getElementById("resultPrevBtn").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(currentPageIndex - 1, total);
+  });
+
+  document.getElementById("resultNextBtn").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(currentPageIndex + 1, total);
+  });
+
+  document.getElementById("resultJumpMorning").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(1, total);
+  });
+
+  document.getElementById("resultJumpNoon").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(2, total);
+  });
+
+  document.getElementById("resultJumpEvening").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(3, total);
+  });
+
+  document.getElementById("resultJumpOther").addEventListener("click", function () {
+    var resultCards = document.getElementById("resultCards");
+    if (!resultCards) {
+      return;
+    }
+    var children = resultCards.children;
+    var total = children.length;
+    if (total === 0) {
+      return;
+    }
+    goToResultPage(total, total);
   });
 
   function buildShareTextFromSchedule(schedule) {
@@ -2241,13 +2880,31 @@
       lines.push("");
     }
 
-    addGroup("아침", schedule.morning);
-    addGroup("점심", schedule.noon);
-    addGroup("저녁", schedule.evening);
-    addGroup("자기 전", schedule.bedtime);
-    addGroup("필요할 때만 먹는 약", schedule.asNeeded);
-    addGroup("매일 먹지 않는 약", schedule.nonDaily);
-    addGroup("복용 유형 확인 필요", schedule.unresolved);
+    addGroup("아침", schedule.morning || []);
+    addGroup("점심", schedule.noon || []);
+    addGroup("저녁", schedule.evening || []);
+
+    var bedtime = [];
+    var asNeeded = [];
+    var nonDaily = [];
+    var unresolved = [];
+
+    (schedule.others || []).forEach(function (m) {
+      if (m.scheduleType === "as_needed") {
+        asNeeded.push(m);
+      } else if (m.scheduleType === "non_daily") {
+        nonDaily.push(m);
+      } else if (m.scheduleType === "unresolved") {
+        unresolved.push(m);
+      } else if (m.scheduleType === "daily" && m.timeSlots && m.timeSlots.indexOf && m.timeSlots.indexOf("bedtime") !== -1) {
+        bedtime.push(m);
+      }
+    });
+
+    addGroup("자기 전", bedtime);
+    addGroup("필요할 때만 먹는 약", asNeeded);
+    addGroup("매일 먹지 않는 약", nonDaily);
+    addGroup("복용 유형 확인 필요", unresolved);
 
     return lines.join("\n");
   }
@@ -2342,11 +2999,19 @@
   function clearShareUI() {
     var preview = document.getElementById("sharePreview");
     var fallback = document.getElementById("copyFallback");
+    var textEl = document.getElementById("copyFallbackText");
+    var textPreview = document.getElementById("sharePreviewText");
     if (preview) {
       preview.style.display = "none";
+      if (textPreview) {
+        textPreview.textContent = "";
+      }
     }
     if (fallback) {
       fallback.style.display = "none";
+      if (textEl) {
+        textEl.value = "";
+      }
     }
   }
 
@@ -2364,8 +3029,7 @@
   function tryShare(text) {
     var shareData = {
       title: "약 먹는 시간표",
-      text: text,
-      url: null
+      text: text
     };
 
     if (navigator && navigator.share) {
@@ -2380,41 +3044,76 @@
     }
 
     if (!canShowConfirmedSchedule()) {
-      showErr("공유하기에 앞서 시간표 확인이 필요합니다.");
+      setShareStatus("공유하기에 앞서 시간표 확인이 필요합니다.");
       return;
     }
 
-    var schedule = getConfirmedScheduleForShare();
-    if (!schedule) {
-      showErr("공유할 시간표를 준비하지 못했습니다.");
+    if (!confirmedSchedule) {
+      setShareStatus("공유할 시간표를 준비하지 못했습니다.");
       return;
     }
 
-    var text = buildShareTextFromSchedule(schedule);
+    var text = buildShareTextFromSchedule(confirmedSchedule);
     if (!text) {
-      showErr("공유할 내용을 만들지 못했습니다.");
+      setShareStatus("공유할 내용을 만들지 못했습니다.");
       return;
     }
 
-    renderSharePreview(schedule);
+    renderSharePreview(confirmedSchedule);
+    var snapshot = confirmedSchedule;
 
     tryShare(text).then(function () {
+      if (snapshot !== confirmedSchedule) {
+        setShareStatus("");
+        return;
+      }
+      setShareStatus("시간표를 공유했습니다.");
       clearShareUI();
     }).catch(function (error) {
       var code = error && error.name ? error.name : "";
       if (code === "AbortError") {
+        if (snapshot !== confirmedSchedule) {
+          setShareStatus("");
+          return;
+        }
+        setShareStatus("공유를 취소했습니다.");
         clearShareUI();
         return;
       }
 
       if (code === "NotAllowedError") {
-        clearShareUI();
+        if (snapshot !== confirmedSchedule) {
+          setShareStatus("");
+          return;
+        }
+        copyShareText(text).then(function (ok) {
+          if (snapshot !== confirmedSchedule) {
+            setShareStatus("");
+            return;
+          }
+          if (ok) {
+            setShareStatus("시간표를 복사했습니다. 받는 사람에게 붙여넣어 주세요.");
+            clearShareUI();
+            return;
+          }
+          showCopyFallback(confirmedSchedule);
+          setShareStatus("복사가 되지 않았습니다. 위 텍스트를 눌러 선택한 뒤 복사하세요.");
+        }).catch(function () {
+          if (snapshot !== confirmedSchedule) {
+            setShareStatus("");
+            return;
+          }
+          showCopyFallback(confirmedSchedule);
+          setShareStatus("복사가 되지 않았습니다. 위 텍스트를 눌러 선택한 뒤 복사하세요.");
+        });
+        return;
       }
 
       copyShareText(text).then(function (ok) {
         if (ok) {
           clearShareUI();
-          showErr("시간표를 복사했습니다.\n받는 사람에게 붙여넣어 주세요.");
+          showErr("시간표를 복사했습니다.\
+받는 사람에게 붙여넣어 주세요.");
           return;
         }
         showCopyFallback(schedule);
@@ -2432,28 +3131,29 @@
     }
 
     if (!canShowConfirmedSchedule()) {
-      showErr("복사하기에 앞서 시간표 확인이 필요합니다.");
+      setShareStatus("복사하기에 앞서 시간표 확인이 필요합니다.");
       return;
     }
 
-    var schedule = getConfirmedScheduleForShare();
-    if (!schedule) {
-      showErr("복사할 시간표를 준비하지 못했습니다.");
+    if (!confirmedSchedule) {
+      setShareStatus("복사할 시간표를 준비하지 못했습니다.");
       return;
     }
 
-    var text = buildShareTextFromSchedule(schedule);
+    var text = buildShareTextFromSchedule(confirmedSchedule);
     if (!text) {
-      showErr("복사할 내용을 만들지 못했습니다.");
+      setShareStatus("복사할 내용을 만들지 못했습니다.");
       return;
     }
 
-    renderSharePreview(schedule);
+    renderSharePreview(confirmedSchedule);
+    var snapshot = confirmedSchedule;
 
     copyShareText(text).then(function (ok) {
       if (ok) {
         clearShareUI();
-        showErr("시간표를 복사했습니다.\n받는 사람에게 붙여넣어 주세요.");
+        showErr("시간표를 복사했습니다.\
+받는 사람에게 붙여넣어 주세요.");
         return;
       }
       showCopyFallback(schedule);
@@ -2472,147 +3172,51 @@
   resetBtn.addEventListener("click", function () {
     if (isProcessing) return;
     clearSourceImage();
-    file.value = "";
+    fileSelectInput.value = "";
+    captureInput.value = "";
     hideAll();
     refreshConfirmedPreview();
     updateResultAfterButtons();
-    result.textContent = "";
-    sourceNote.textContent = "";
   });
 
-  document.getElementById("sourceZoomBtn").addEventListener("click", function () {
-    var viewport = document.getElementById("sourceViewport");
-    var button = document.getElementById("sourceZoomBtn");
+  document.getElementById("sourceZoomBtn")
+    .addEventListener("click", function () {
+      var viewport = document.getElementById("sourceViewport");
+      var expanded = viewport.classList.toggle("is-zoomed");
+      this.textContent = expanded ? "사진 크기 되돌리기" : "사진 크게 보기";
+      this.setAttribute("aria-expanded", String(expanded));
 
-    var expanded = button.getAttribute("aria-expanded") === "true";
+      if (!expanded) {
+        viewport.scrollTop = 0;
+        viewport.scrollLeft = 0;
+      }
 
-    if (expanded) {
-      viewport.scrollTop = 0;
-      viewport.scrollLeft = 0;
-      viewport.classList.remove("is-zoomed");
-      button.textContent = "사진 크게 보기";
-      button.setAttribute("aria-expanded", "false");
-    } else {
-      viewport.scrollTop = 0;
-      viewport.scrollLeft = 0;
-      viewport.classList.add("is-zoomed");
-      button.textContent = "사진 원래 크기로";
-      button.setAttribute("aria-expanded", "true");
-    }
-  });
+      viewport.focus();
+    });
 
-  document.getElementById("sourcePrevBtn").addEventListener("click", function () {
-    var resultTrack = document.getElementById("resultTrack");
-    var resultCards = document.getElementById("resultCards");
-    if (!resultTrack || !resultCards) {
-      return;
-    }
-    var children = resultCards.children;
-    var total = children.length;
-    for (var i = 0; i < total; i++) {
-      var child = children[i];
-      var childCenter = child.offsetLeft + child.offsetWidth / 2;
-      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
-      if (childCenter < currentLeft) {
-        scrollToResultPage(i + 1, total);
+  document.getElementById("documentConfirm")
+    .addEventListener("change", function () {
+      if (updatingDocumentReview) return;
+      if (!reviewState) {
+        updatingDocumentReview = true;
+        updateDocumentReview();
+        updatingDocumentReview = false;
         return;
       }
-    }
-    scrollToResultPage(1, total);
-  });
 
-  document.getElementById("sourceNextBtn").addEventListener("click", function () {
-    var resultTrack = document.getElementById("resultTrack");
-    var resultCards = document.getElementById("resultCards");
-    if (!resultTrack || !resultCards) {
-      return;
-    }
-    var children = resultCards.children;
-    var total = children.length;
-    for (var i = 0; i < total; i++) {
-      var child = children[i];
-      var childCenter = child.offsetLeft + child.offsetWidth / 2;
-      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
-      if (childCenter > currentLeft) {
-        scrollToResultPage(i + 2, total);
-        return;
-      }
-    }
-    scrollToResultPage(total, total);
-  });
+      var ready = reviewState.medications.length > 0 &&
+        reviewState.medications.every(function (medication) {
+          return medication.confirmed === true;
+        });
 
-  previewBtn.addEventListener("click", function () {
-    if (!canShowConfirmedSchedule()) {
-      showErr("아직 큰 글씨 시간표를 볼 수 없습니다.");
-      return;
-    }
+      reviewState.documentConfirmed = ready && this.checked;
 
-    var schedule = buildConfirmedSchedule(reviewState);
-    if (!schedule) {
-      showErr("큰 글씨 시간표를 준비하지 못했습니다.");
-      return;
-    }
-
-    renderConfirmedSchedule(schedule);
-  });
-
-  printBtn.addEventListener("click", function () {
-    window.print();
-  });
-
-  backToEditBtn.addEventListener("click", function () {
-    resultCard.style.display = "none";
-    resultTrack.style.display = "none";
-    resultNav.style.display = "none";
-    confirmedStatus.textContent = "";
-    document.getElementById("resultCards").replaceChildren();
-    clearShareUI();
-    draftCard.style.display = "block";
-  });
-
-  document.getElementById("resultPrevBtn").addEventListener("click", function () {
-    var resultTrack = document.getElementById("resultTrack");
-    var resultCards = document.getElementById("resultCards");
-    if (!resultTrack || !resultCards) {
-      return;
-    }
-    var children = resultCards.children;
-    var total = children.length;
-    for (var i = 0; i < total; i++) {
-      var child = children[i];
-      var childCenter = child.offsetLeft + child.offsetWidth / 2;
-      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
-      if (childCenter < currentLeft) {
-        scrollToResultPage(i + 1, total);
-        return;
-      }
-    }
-    scrollToResultPage(1, total);
-  });
-
-  document.getElementById("resultNextBtn").addEventListener("click", function () {
-    var resultTrack = document.getElementById("resultTrack");
-    var resultCards = document.getElementById("resultCards");
-    if (!resultTrack || !resultCards) {
-      return;
-    }
-    var children = resultCards.children;
-    var total = children.length;
-    for (var i = 0; i < total; i++) {
-      var child = children[i];
-      var childCenter = child.offsetLeft + child.offsetWidth / 2;
-      var currentLeft = resultTrack.scrollLeft + resultTrack.getBoundingClientRect().width / 2;
-      if (childCenter > currentLeft) {
-        scrollToResultPage(i + 2, total);
-        return;
-      }
-    }
-    scrollToResultPage(total, total);
-  });
-
-  window.addEventListener("resize", function () {
-    updateResultNav();
-  });
+      updatingDocumentReview = true;
+      updateDocumentReview();
+      refreshConfirmedPreview();
+      updateShareButtonsIfReady();
+      updatingDocumentReview = false;
+    });
 })();
 </script>
 </body>
