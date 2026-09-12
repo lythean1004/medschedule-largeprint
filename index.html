@@ -309,6 +309,83 @@
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   .upload-btn { display: none; }
 
+  .capture-notes {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #FFF8E6;
+    border: 1.5px solid #FFE59A;
+    border-radius: 14px;
+    text-align: left;
+  }
+
+  .capture-notes-title {
+    font-size: clamp(15pt, 3vw, 17pt);
+    font-weight: 700;
+    color: #7A5B00;
+    margin: 0 0 8px;
+  }
+
+  .capture-notes-list {
+    margin: 0;
+    padding-left: 22px;
+    font-size: clamp(14pt, 2.6vw, 16pt);
+    line-height: 1.6;
+    color: #5A4600;
+  }
+
+  .capture-notes-list li {
+    margin: 4px 0;
+  }
+
+  #analyzePhotoBtn {
+    margin-top: 16px;
+    min-height: 52px;
+    font-size: clamp(17pt, 3.4vw, 20pt);
+    font-weight: 700;
+    padding: 14px 24px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .rotate-row {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  #rotateLeftBtn,
+  #rotateRightBtn {
+    min-height: 48px;
+    min-width: 132px;
+    font-size: clamp(15pt, 2.8vw, 17pt);
+    font-weight: 700;
+    padding: 12px 16px;
+    flex: 0 0 auto;
+  }
+
+  .rotate-status-message {
+    margin-top: 12px;
+    min-height: 24px;
+    font-size: clamp(14pt, 2.6vw, 16pt);
+    font-weight: 600;
+    color: #7A2E2E;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  #rotateLeftBtn:disabled,
+  #rotateRightBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  #analyzePhotoBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   #sourceViewport {
     margin-top: 16px;
     max-height: 65vh;
@@ -355,7 +432,7 @@
       padding: 0;
     }
 
-    .safety-badges, .upload-card, .btn-row, .status-card, .error-card { display: none !important; }
+    .safety-badges, .upload-card, .btn-row, .status-card, .error-card, .capture-notes, .rotate-row { display: none !important; }
     .header { text-align: left; padding: 0; }
     .header-icon-wrap, .header-icon, .header-icon-svg, .header-sub-svg { display: none; }
     .subtitle { color: #000; font-size: 16pt; }
@@ -1040,9 +1117,61 @@
   var status = document.getElementById("status");
   var resultCard = document.getElementById("resultCard");
   var errCard = document.getElementById("errCard");
+  var sourceCard = document.getElementById("sourceCard");
+  var sourceTitle = document.getElementById("sourceTitle");
+  var sourceIntro = sourceCard && sourceCard.querySelector("p");
+  var sourceViewport = document.getElementById("sourceViewport");
+  var analyzePhotoBtn = document.createElement("button");
+  analyzePhotoBtn.type = "button";
+  analyzePhotoBtn.className = "btn-secondary";
+  analyzePhotoBtn.id = "analyzePhotoBtn";
+  analyzePhotoBtn.textContent = "이 사진으로 읽기";
+  var rotateRow = document.createElement("div");
+  rotateRow.className = "rotate-row";
+  rotateRow.style.display = "flex";
+  rotateRow.style.gap = "12px";
+  rotateRow.style.justifyContent = "center";
+  var rotateLeftBtn = document.createElement("button");
+  rotateLeftBtn.type = "button";
+  rotateLeftBtn.className = "btn-secondary";
+  rotateLeftBtn.id = "rotateLeftBtn";
+  rotateLeftBtn.textContent = "왼쪽으로 회전";
+  var rotateRightBtn = document.createElement("button");
+  rotateRightBtn.type = "button";
+  rotateRightBtn.className = "btn-secondary";
+  rotateRightBtn.id = "rotateRightBtn";
+  rotateRightBtn.textContent = "오른쪽으로 회전";
+  rotateRow.appendChild(rotateLeftBtn);
+  rotateRow.appendChild(rotateRightBtn);
+  var rotateStatusMessage = document.createElement("div");
+  rotateStatusMessage.className = "rotate-status-message";
+  rotateStatusMessage.setAttribute("aria-live", "polite");
+  rotateStatusMessage.style.marginTop = "12px";
+  rotateStatusMessage.style.minHeight = "24px";
+  rotateStatusMessage.style.fontSize = "clamp(14pt, 2.6vw, 16pt)";
+  rotateStatusMessage.style.fontWeight = "600";
+  rotateStatusMessage.style.color = "#7A2E2E";
+  rotateStatusMessage.style.textAlign = "center";
+  rotateStatusMessage.style.lineHeight = "1.5";
+  var captureNotes = document.createElement("div");
+  captureNotes.className = "capture-notes";
+  captureNotes.innerHTML =
+    '<p class="capture-notes-title">촬영 안내</p>' +
+    '<ul class="capture-notes-list">' +
+    '<li>글씨가 똑바로 보이게 찍어 주세요.</li>' +
+    '<li>약 이름과 복용 방법이 잘리지 않게 담아 주세요.</li>' +
+    '<li>빛 반사와 흔들림 없이 가까이 찍어 주세요.</li>' +
+    '</ul>';
   var printBtn = document.getElementById("printBtn");
   var resetBtn = document.getElementById("resetBtn");
   var isProcessing = false;
+  var selectedPhotoDataUrl = null;
+  var analyzeDisabledReason = "";
+  var pendingAnalyzeRequest = false;
+  var rotationAngle = 0;
+  var originalImageBitmap = null;
+  var rotationInProgress = false;
+  var currentJobId = 0;
   var reviewState = null;
   var previewBtn = document.getElementById("previewBtn");
   var backToEditBtn = document.getElementById("backToEditBtn");
@@ -1065,8 +1194,14 @@
     fileSelectInput.disabled = active;
     captureInput.disabled = active;
     resetBtn.disabled = active;
+    if (analyzePhotoBtn) analyzePhotoBtn.disabled = active;
+    if (rotateLeftBtn) rotateLeftBtn.disabled = active;
+    if (rotateRightBtn) rotateRightBtn.disabled = active;
     fileSelectBtn.setAttribute("aria-busy", String(active));
     captureBtn.setAttribute("aria-busy", String(active));
+    if (analyzePhotoBtn) analyzePhotoBtn.setAttribute("aria-busy", String(active));
+    if (rotateLeftBtn) rotateLeftBtn.setAttribute("aria-busy", String(active));
+    if (rotateRightBtn) rotateRightBtn.setAttribute("aria-busy", String(active));
   }
 
   function setShareStatus(message) {
@@ -1106,8 +1241,11 @@
 
   function clearSourceImage() {
     resetSourceZoom();
-    document.getElementById("sourceCard").style.display = "none";
     document.getElementById("sourceImage").removeAttribute("src");
+    selectedPhotoDataUrl = null;
+    analyzeDisabledReason = "";
+    pendingAnalyzeRequest = false;
+    hidePhotoCaptureUI();
   }
 
   function showSourceImage(dataUrl) {
@@ -1115,6 +1253,302 @@
     var image = document.getElementById("sourceImage");
     image.src = dataUrl;
     document.getElementById("sourceCard").style.display = "block";
+  }
+
+  function ensurePhotoCaptureUI() {
+    if (!sourceCard) return;
+    if (document.getElementById("analyzePhotoBtn")) return;
+    if (document.getElementById("captureNotes")) return;
+
+    var viewport = sourceViewport;
+    if (!viewport) return;
+
+    viewport.insertAdjacentElement("afterend", captureNotes);
+    captureNotes.insertAdjacentElement("afterend", rotateRow);
+    rotateRow.insertAdjacentElement("afterend", analyzePhotoBtn);
+
+    analyzePhotoBtn.addEventListener("click", function () {
+      analyzePhotoClicked();
+    });
+    rotateLeftBtn.addEventListener("click", function () {
+      rotatePhoto(-90);
+    });
+    rotateRightBtn.addEventListener("click", function () {
+      rotatePhoto(90);
+    });
+  }
+
+  function showPhotoCaptureUI() {
+    ensurePhotoCaptureUI();
+    if (!sourceCard) return;
+    sourceCard.style.display = "block";
+    if (captureNotes) captureNotes.style.display = "block";
+    if (rotateRow) rotateRow.style.display = "flex";
+    if (rotateStatusMessage) rotateStatusMessage.style.display = "block";
+    if (analyzePhotoBtn) {
+      analyzePhotoBtn.style.display = "block";
+      updateAnalyzeButton();
+    }
+    updateRotateButtons();
+  }
+
+  function hidePhotoCaptureUI() {
+    if (!sourceCard) return;
+    sourceCard.style.display = "none";
+    if (captureNotes) captureNotes.style.display = "none";
+    if (rotateRow) rotateRow.style.display = "none";
+    if (rotateStatusMessage) rotateStatusMessage.style.display = "none";
+    if (analyzePhotoBtn) {
+      analyzePhotoBtn.style.display = "none";
+      analyzePhotoBtn.disabled = true;
+    }
+    if (rotateLeftBtn) rotateLeftBtn.disabled = true;
+    if (rotateRightBtn) rotateRightBtn.disabled = true;
+    rotationAngle = 0;
+    rotationInProgress = false;
+    originalImageBitmap = null;
+  }
+
+  function updateAnalyzeButton() {
+    if (!analyzePhotoBtn) return;
+    if (!selectedPhotoDataUrl || isProcessing || pendingAnalyzeRequest || rotationInProgress) {
+      analyzePhotoBtn.disabled = true;
+      analyzePhotoBtn.setAttribute("aria-disabled", "true");
+      if (analyzeDisabledReason) {
+        analyzePhotoBtn.title = analyzeDisabledReason;
+      }
+      return;
+    }
+    analyzePhotoBtn.disabled = false;
+    analyzePhotoBtn.removeAttribute("aria-disabled");
+    if (analyzeDisabledReason) {
+      analyzePhotoBtn.removeAttribute("title");
+    }
+  }
+
+  function updateRotateButtons() {
+    if (!rotateLeftBtn || !rotateRightBtn) return;
+    var busy = isProcessing || pendingAnalyzeRequest || rotationInProgress;
+    var disabled = !selectedPhotoDataUrl || busy;
+    rotateLeftBtn.disabled = disabled;
+    rotateRightBtn.disabled = disabled;
+    rotateLeftBtn.setAttribute("aria-disabled", String(disabled));
+    rotateRightBtn.setAttribute("aria-disabled", String(disabled));
+  }
+
+  function analyzePhotoClicked() {
+    if (!analyzePhotoBtn) return;
+    if (!selectedPhotoDataUrl) {
+      analyzeDisabledReason = "읽을 사진이 없습니다. 사진을 다시 선택해 주세요.";
+      updateAnalyzeButton();
+      return;
+    }
+    if (isProcessing || pendingAnalyzeRequest || rotationInProgress) {
+      analyzeDisabledReason = "사진 읽기·분석·회전 중입니다. 잠시 기다려 주세요.";
+      updateAnalyzeButton();
+      return;
+    }
+
+    setProcessing(true);
+    var jobId = ++currentJobId;
+    pendingAnalyzeRequest = true;
+    analyzeDisabledReason = "약별 초안을 만들고 있어요.";
+    updateAnalyzeButton();
+    status.style.display = "block";
+
+    var dataUrl = selectedPhotoDataUrl;
+    if (!dataUrl || jobId !== currentJobId) {
+      pendingAnalyzeRequest = false;
+      analyzeDisabledReason = "";
+      updateAnalyzeButton();
+      status.style.display = "none";
+      setProcessing(false);
+      return;
+    }
+
+    postSchedule(dataUrl)
+      .then(function (json) {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        if (!json || typeof json !== "object" || Array.isArray(json)) {
+          showErr("약별 초안 응답을 확인하지 못했습니다.");
+          return;
+        }
+        if (json.error) {
+          showErr("약별 초안을 만들지 못했습니다. 다시 시도해 주세요.");
+          return;
+        }
+        if (!json.draft) {
+          showErr("약별 초안이 없습니다. 다시 시도해 주세요.");
+          return;
+        }
+        renderMedicationDraft(json.draft);
+      })
+      .catch(function () {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
+      })
+      .finally(function () {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        pendingAnalyzeRequest = false;
+        setProcessing(false);
+        status.style.display = "none";
+        analyzeDisabledReason = "";
+        updateAnalyzeButton();
+        updateRotateButtons();
+      });
+  }
+
+  function loadOriginalBitmapFromDataUrl(dataUrl) {
+    return Promise.resolve()
+      .then(function () {
+        return new Promise(function (resolve, reject) {
+          var img = new Image();
+          img.onload = function () {
+            resolve(img);
+          };
+          img.onerror = function () {
+            reject(new Error("이미지 디코딩 실패"));
+          };
+          img.src = dataUrl;
+        });
+      });
+  }
+
+  function rotatePhoto(angle) {
+    if (!rotateLeftBtn && !rotateRightBtn) return;
+    if (!selectedPhotoDataUrl || !originalImageBitmap || !originalImageBitmap.width || !originalImageBitmap.height) {
+      if (rotateLeftBtn) rotateLeftBtn.disabled = true;
+      if (rotateRightBtn) rotateRightBtn.disabled = true;
+      return;
+    }
+    if (isProcessing || pendingAnalyzeRequest || rotationInProgress) {
+      return;
+    }
+
+    setProcessing(true);
+    var jobId = ++currentJobId;
+    rotationInProgress = true;
+    updateAnalyzeButton();
+    updateRotateButtons();
+
+    var dataUrl = selectedPhotoDataUrl;
+    if (!dataUrl || !originalImageBitmap || !originalImageBitmap.width || !originalImageBitmap.height || jobId !== currentJobId) {
+      rotationInProgress = false;
+      setProcessing(false);
+      updateAnalyzeButton();
+      updateRotateButtons();
+      return;
+    }
+
+    var savedRotationAngle = rotationAngle;
+    var savedSelectedPhotoDataUrl = selectedPhotoDataUrl;
+    var hadDraftOrResult =
+      (reviewState && reviewState.medications && reviewState.medications.length > 0) ||
+      confirmedSchedule !== null ||
+      (sharePreview && sharePreview.style.display === "block");
+
+    var nextAngle = (rotationAngle + angle + 360) % 360;
+
+    Promise.resolve()
+      .then(function () {
+        return renderRotatedImageDataUrl(originalImageBitmap, nextAngle);
+      })
+      .then(function (dataUrl) {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        if (!dataUrl) {
+          throw new Error("이미지 변환 실패");
+        }
+        rotationAngle = nextAngle;
+        selectedPhotoDataUrl = dataUrl;
+        var image = document.getElementById("sourceImage");
+        if (image) image.src = dataUrl;
+        resetSourceZoom();
+
+        if (hadDraftOrResult) {
+          clearMedicationDraft();
+          confirmedSchedule = null;
+          var resultCard = document.getElementById("resultCard");
+          var resultCards = document.getElementById("resultCards");
+          var sharePreview = document.getElementById("sharePreview");
+          var sharePreviewText = document.getElementById("sharePreviewText");
+          var copyFallback = document.getElementById("copyFallback");
+          var copyFallbackText = document.getElementById("copyFallbackText");
+          var shareBtn = document.getElementById("shareBtn");
+          var copyBtn = document.getElementById("copyBtn");
+          var printBtn = document.getElementById("printBtn");
+
+          if (resultCard) resultCard.style.display = "none";
+          if (resultCards) resultCards.replaceChildren();
+          if (sharePreview) sharePreview.style.display = "none";
+          if (sharePreviewText) sharePreviewText.textContent = "";
+          if (copyFallback) copyFallback.style.display = "none";
+          if (copyFallbackText) copyFallbackText.value = "";
+          if (shareBtn) shareBtn.disabled = true;
+          if (copyBtn) copyBtn.disabled = true;
+          if (printBtn) printBtn.disabled = true;
+
+          if (rotateStatusMessage) {
+            rotateStatusMessage.textContent = "사진 방향이 변경됐습니다. 이 사진으로 다시 읽어 주세요.";
+          }
+        }
+      })
+      .catch(function () {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        rotationAngle = savedRotationAngle;
+        selectedPhotoDataUrl = savedSelectedPhotoDataUrl;
+        if (rotateStatusMessage) {
+          rotateStatusMessage.textContent = "사진을 회전하지 못했습니다. 다시 시도하거나 다른 사진을 선택해 주세요.";
+        }
+      })
+      .finally(function () {
+        if (jobId !== currentJobId) {
+          return;
+        }
+        rotationInProgress = false;
+        setProcessing(false);
+        updateAnalyzeButton();
+        updateRotateButtons();
+      });
+  }
+
+  function renderRotatedImageDataUrl(img, angle) {
+    return Promise.resolve()
+      .then(function () {
+        if (!img || !img.width || !img.height) {
+          return null;
+        }
+        var w = img.width;
+        var h = img.height;
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d");
+
+        if (angle === 90 || angle === 270) {
+          canvas.width = h;
+          canvas.height = w;
+        } else {
+          canvas.width = w;
+          canvas.height = h;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((angle || 0) * Math.PI / 180);
+        ctx.drawImage(img, -w / 2, -h / 2);
+        ctx.restore();
+
+        return canvas.toDataURL("image/png");
+      });
   }
 
   function resetSourceZoom() {
@@ -1174,37 +1608,92 @@
     if (copyBtn) copyBtn.disabled = true;
     if (printBtn) printBtn.disabled = true;
 
+    var jobId = ++currentJobId;
     var reader = new FileReader();
 
     reader.onload = function (e) {
-      Promise.resolve()
-        .then(function () {
-          showSourceImage(e.target.result);
-          return postSchedule(e.target.result);
+      if (jobId !== currentJobId) {
+        return;
+      }
+      var dataUrl = e.target.result;
+      pendingAnalyzeRequest = false;
+      analyzeDisabledReason = "사진을 선택했습니다. 이 사진으로 읽기를 눌러 주세요.";
+      loadOriginalBitmapFromDataUrl(dataUrl)
+        .then(function (img) {
+          if (jobId !== currentJobId) {
+            return;
+          }
+          originalImageBitmap = img;
+          rotationAngle = 0;
+          selectedPhotoDataUrl = dataUrl;
+          showSourceImage(dataUrl);
+          showPhotoCaptureUI();
         })
         .catch(function () {
-          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
+          if (jobId !== currentJobId) {
+            return;
+          }
+          selectedPhotoDataUrl = null;
+          originalImageBitmap = null;
+          rotationAngle = 0;
+          showPhotoCaptureUI();
+          updateAnalyzeButton();
+          updateRotateButtons();
+          showErr("사진을 열지 못했습니다. 다른 사진을 선택하거나 다시 찍어 주세요.");
         })
         .finally(function () {
+          if (jobId !== currentJobId) {
+            return;
+          }
           setProcessing(false);
+          status.style.display = "none";
+          updateAnalyzeButton();
+          updateRotateButtons();
         });
     };
 
     reader.onerror = function () {
-      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
+      if (jobId !== currentJobId) {
+        return;
+      }
+      selectedPhotoDataUrl = null;
+      pendingAnalyzeRequest = false;
+      analyzeDisabledReason = "";
+      showErr("사진을 열지 못했습니다. 다른 사진을 선택하거나 다시 찍어 주세요.");
       setProcessing(false);
+      status.style.display = "none";
+      updateAnalyzeButton();
+      updateRotateButtons();
     };
 
     reader.onabort = function () {
+      if (jobId !== currentJobId) {
+        return;
+      }
+      selectedPhotoDataUrl = null;
+      pendingAnalyzeRequest = false;
+      analyzeDisabledReason = "";
       showErr("사진 읽기가 취소됐습니다.");
       setProcessing(false);
+      status.style.display = "none";
+      updateAnalyzeButton();
+      updateRotateButtons();
     };
 
     try {
       reader.readAsDataURL(file);
     } catch (error) {
-      showErr("사진을 읽지 못했습니다. 다시 골라 주세요.");
+      if (jobId !== currentJobId) {
+        return;
+      }
+      selectedPhotoDataUrl = null;
+      pendingAnalyzeRequest = false;
+      analyzeDisabledReason = "";
+      showErr("사진을 열지 못했습니다. 다른 사진을 선택하거나 다시 찍어 주세요.");
       setProcessing(false);
+      status.style.display = "none";
+      updateAnalyzeButton();
+      updateRotateButtons();
     }
   }
 
@@ -2078,31 +2567,36 @@ function refreshArticleMissing(article, medication) {
 
     var totalPages = pages.length;
     var resultTrack = document.getElementById("resultTrack");
+    var resultNav = document.getElementById("resultNav");
+    var resultCard = document.getElementById("resultCard");
+    var help = document.getElementById("printHelp");
+    var confirmedStatus = document.getElementById("confirmedStatus");
+
+    if (resultCard) {
+      resultCard.style.display = "block";
+    }
     if (resultTrack) {
       resultTrack.style.display = totalPages > 1 ? "block" : "none";
     }
-
-    var resultNav = document.getElementById("resultNav");
     if (resultNav) {
       resultNav.classList.toggle("is-visible", totalPages > 1);
     }
-
-    if (totalPages > 0) {
-      scrollToResultPage(1, totalPages);
-    }
-
-    updateResultNav();
-
-    document.getElementById("resultCard").style.display = "block";
-
-    var help = document.getElementById("printHelp");
     if (help) {
       help.style.display = "block";
     }
+    if (confirmedStatus) {
+      confirmedStatus.textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
+    }
 
-    document.getElementById("confirmedStatus").textContent = "확인 완료. 큰 글씨 시간표를 볼 수 있습니다.";
-
-    updateResultAfterButtons();
+    if (totalPages > 0) {
+      requestAnimationFrame(function () {
+        scrollToResultPage(1, totalPages);
+        updateResultAfterButtons();
+        if (resultCard && typeof resultCard.scrollIntoView === "function") {
+          resultCard.scrollIntoView({ behavior: "auto", block: "start" });
+        }
+      });
+    }
   }
 
   function scrollToResultPage(index, total) {
@@ -2876,30 +3370,6 @@ function refreshArticleMissing(article, medication) {
           }
           return r.json();
         })
-        .then(function (json) {
-          status.style.display = "none";
-
-          if (!json || typeof json !== "object" || Array.isArray(json)) {
-            showErr("약별 초안 응답을 확인하지 못했습니다.");
-            return;
-          }
-
-          if (json.error) {
-            showErr("약별 초안을 만들지 못했습니다. 다시 시도해 주세요.");
-            return;
-          }
-
-          if (!json.draft) {
-            showErr("약별 초안이 없습니다. 다시 시도해 주세요.");
-            return;
-          }
-
-          renderMedicationDraft(json.draft);
-        })
-        .catch(function () {
-          status.style.display = "none";
-          showErr("약별 초안을 만드는 중 오류가 났습니다. 다시 시도해 주세요.");
-        })
     );
   }
 
@@ -2990,7 +3460,20 @@ function refreshArticleMissing(article, medication) {
     }
 
     confirmedSchedule = schedule;
-    renderConfirmedSchedule(confirmedSchedule);
+
+    try {
+      renderConfirmedSchedule(confirmedSchedule);
+    } catch (error) {
+      var message = document.getElementById("documentReviewStatus");
+      if (message) {
+        message.textContent = "시간표를 표시하지 못했습니다. 입력 내용은 유지됩니다.";
+      }
+      var status = document.getElementById("documentReviewStatus");
+      if (status && typeof status.focus === "function") {
+        try { status.focus(); } catch (e) {}
+      }
+      return;
+    }
   });
 
   printBtn.addEventListener("click", function () {
@@ -3434,9 +3917,32 @@ function refreshArticleMissing(article, medication) {
 
   resetBtn.addEventListener("click", function () {
     if (isProcessing) return;
+    currentJobId++;
     clearSourceImage();
     fileSelectInput.value = "";
     captureInput.value = "";
+    clearMedicationDraft();
+    confirmedSchedule = null;
+    var resultCard = document.getElementById("resultCard");
+    var resultCards = document.getElementById("resultCards");
+    var sharePreview = document.getElementById("sharePreview");
+    var sharePreviewText = document.getElementById("sharePreviewText");
+    var copyFallback = document.getElementById("copyFallback");
+    var copyFallbackText = document.getElementById("copyFallbackText");
+    var shareBtn = document.getElementById("shareBtn");
+    var copyBtn = document.getElementById("copyBtn");
+    var printBtn = document.getElementById("printBtn");
+
+    if (resultCard) resultCard.style.display = "none";
+    if (resultCards) resultCards.replaceChildren();
+    if (sharePreview) sharePreview.style.display = "none";
+    if (sharePreviewText) sharePreviewText.textContent = "";
+    if (copyFallback) copyFallback.style.display = "none";
+    if (copyFallbackText) copyFallbackText.value = "";
+    if (shareBtn) shareBtn.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
+    if (printBtn) printBtn.disabled = true;
+
     hideAll();
     refreshConfirmedPreview();
     updateResultAfterButtons();
