@@ -527,6 +527,7 @@
     #resultNav,
     #shareStatus,
     #imageExportStatus,
+    #calendarReminderPanel,
     #sharePreview,
     #copyFallback,
     #confirmedStatus,
@@ -1031,6 +1032,103 @@
 
       <div id="imageExportStatus" role="status" aria-live="polite" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
+      <section id="calendarReminderPanel" aria-labelledby="calendarReminderTitle" style="margin-top:20px; padding:18px 16px; background:#FAF8F5; border:1px solid #E5E7EB; border-radius:16px;">
+        <h3 id="calendarReminderTitle" style="font-size:clamp(15pt,3vw,17pt); font-weight:700; color:#1A202C; margin:0 0 10px;">캘린더 일정 만들기</h3>
+        <p style="font-size:clamp(14pt,2.6vw,16pt); font-weight:500; color:#1A202C; line-height:1.6; margin:0 0 12px;">직접 정한 복약 확인 시간을 캘린더에 추가할 수 있습니다.
+파일을 내려받은 뒤 캘린더에서 일정과 알림 설정을 확인해 주세요.</p>
+        <p style="font-size:clamp(13pt,2.4vw,15pt); font-weight:500; color:#4A5568; line-height:1.55; margin:0;">약 이름과 개인정보는 일정에 포함하지 않습니다.
+이후 시간표를 수정해도 이미 추가한 캘린더 일정은
+자동으로 변경되지 않습니다.</p>
+
+        <div style="margin-top:16px;">
+
+          <div style="margin-top:6px; color:#1A202C; font-size:clamp(14pt,2.6vw,16pt); font-weight:500; line-height:1.55;">
+            알림을 받을 시작일과 종료일을 직접 정해 주세요.
+            약 복용 종료일을 자동으로 계산하는 기능은 아닙니다.
+          </div>
+
+          <div style="margin-top:14px;">
+            <label for="calendarStartDate" style="display:block; margin-bottom:6px; font-size:clamp(14pt,2.6vw,16pt); font-weight:600; color:#1A202C;">시작일</label>
+            <input type="date" id="calendarStartDate" required style="width:100%; min-width:0; padding:12px 14px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:12px; background:#FFFFFF; font-family:inherit;">
+          </div>
+
+          <div style="margin-top:12px;">
+            <label for="calendarEndDate" style="display:block; margin-bottom:6px; font-size:clamp(14pt,2.6vw,16pt); font-weight:600; color:#1A202C;">종료일</label>
+            <input type="date" id="calendarEndDate" required style="width:100%; min-width:0; padding:12px 14px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:12px; background:#FFFFFF; font-family:inherit;">
+          </div>
+
+          <fieldset id="calendarSlotGroup" style="margin-top:16px; border:1px solid #E5E7EB; border-radius:12px; padding:14px 14px 10px;">
+            <legend style="font-size:clamp(15pt,3vw,17pt); font-weight:700; color:#1A202C; padding:0 6px;">캘린더에 추가할 확인 시간</legend>
+
+            <div style="margin-top:12px;">
+              <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; width:100%;">
+                <input type="checkbox" id="calendarMorningEnabled" disabled style="width:28px; height:28px; flex:0 0 28px; margin:0;">
+                <label for="calendarMorningEnabled" style="flex:1 1 auto; min-height:44px; display:flex; align-items:center; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; cursor:pointer;">아침</label>
+                <input type="time" id="calendarMorningTime" aria-label="아침 복약 확인 시각" value="08:30" disabled style="flex:0 0 auto; width:50%; min-width:0; padding:12px 12px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:10px; background:#FFFFFF; font-family:inherit;">
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; width:100%;">
+                <input type="checkbox" id="calendarNoonEnabled" disabled style="width:28px; height:28px; flex:0 0 28px; margin:0;">
+                <label for="calendarNoonEnabled" style="flex:1 1 auto; min-height:44px; display:flex; align-items:center; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; cursor:pointer;">점심</label>
+                <input type="time" id="calendarNoonTime" aria-label="점심 복약 확인 시각" value="13:00" disabled style="flex:0 0 auto; width:50%; min-width:0; padding:12px 12px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:10px; background:#FFFFFF; font-family:inherit;">
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; width:100%;">
+                <input type="checkbox" id="calendarEveningEnabled" disabled style="width:28px; height:28px; flex:0 0 28px; margin:0;">
+                <label for="calendarEveningEnabled" style="flex:1 1 auto; min-height:44px; display:flex; align-items:center; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; cursor:pointer;">저녁</label>
+                <input type="time" id="calendarEveningTime" aria-label="저녁 복약 확인 시각" value="19:30" disabled style="flex:0 0 auto; width:50%; min-width:0; padding:12px 12px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:10px; background:#FFFFFF; font-family:inherit;">
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; width:100%;">
+                <input type="checkbox" id="calendarBedtimeEnabled" disabled style="width:28px; height:28px; flex:0 0 28px; margin:0;">
+                <label for="calendarBedtimeEnabled" style="flex:1 1 auto; min-height:44px; display:flex; align-items:center; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; cursor:pointer;">자기 전</label>
+                <input type="time" id="calendarBedtimeTime" aria-label="자기 전 복약 확인 시각" disabled style="flex:0 0 auto; width:50%; min-width:0; padding:12px 12px; font-size:clamp(15pt,2.8vw,17pt); font-weight:600; color:#1A202C; border:2px solid #E5E7EB; border-radius:10px; background:#FFFFFF; font-family:inherit;">
+              </div>
+            </div>
+
+            <div style="margin-top:12px; color:#4A5568; font-size:clamp(13pt,2.4vw,15pt); font-weight:500; line-height:1.55;">
+              표시된 시각은 예시입니다. 실제 확인할 시각으로 바꿔 주세요.
+              확인된 매일 복용 시간대만 선택할 수 있으며,
+              필요시·비매일 복용은 자동 반복 일정에 포함하지 않습니다.
+            </div>
+          </fieldset>
+
+          <style>
+            #calendarReminderPanel #calendarSlotGroup.calendar-invalid,
+            #calendarReminderPanel #calendarStartDate.calendar-invalid,
+            #calendarReminderPanel #calendarEndDate.calendar-invalid,
+            #calendarReminderPanel #calendarMorningTime.calendar-invalid,
+            #calendarReminderPanel #calendarNoonTime.calendar-invalid,
+            #calendarReminderPanel #calendarEveningTime.calendar-invalid,
+            #calendarReminderPanel #calendarBedtimeTime.calendar-invalid {
+              border-color: #D32F2F !important;
+              background-color: #FDECEA !important;
+            }
+            #calendarReminderPanel .calendar-invalid-msg {
+              color: #C62828;
+              font-weight:600;
+              font-size:clamp(13pt,2.4vw,15pt);
+              margin-top:6px;
+            }
+          </style>
+
+          <div id="calendarValidationStatus" role="status" aria-live="polite" style="margin-top:12px; min-height:24px; color:#1A202C; font-size:clamp(14pt,2.6vw,16pt); font-weight:600;"></div>
+
+          <div id="calendarReminderPreview" style="display:none; margin-top:12px; padding:12px 14px; background:#FFFFFF; border:1px solid #E5E7EB; border-radius:12px;"></div>
+
+        </div>
+
+        <div style="margin-top:16px;">
+          <button type="button" id="downloadCalendarBtn" class="btn-secondary" disabled>캘린더 일정 파일 만들기</button>
+        </div>
+      </section>
+
       <div id="shareStatus" role="status" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
       <div id="sharePreview" style="display:none; margin-top:16px;">
@@ -1249,6 +1347,7 @@
     if (rotateLeftBtn) rotateLeftBtn.setAttribute("aria-busy", String(active));
     if (rotateRightBtn) rotateRightBtn.setAttribute("aria-busy", String(active));
     updateExportButtonIfReady();
+    syncCalendarSlotControls(false);
   }
 
   function setShareStatus(message) {
@@ -1524,6 +1623,7 @@
     document.getElementById("draftList").replaceChildren();
     document.getElementById("draftIssues").replaceChildren();
     updateDocumentReview();
+    syncCalendarSlotControls(true);
   }
 
   function clearSourceImage() {
@@ -2978,6 +3078,8 @@ function refreshArticleMissing(article, medication) {
     if (resultTrack) {
       resultTrack.style.display = totalPages > 1 ? "block" : "none";
     }
+    syncCalendarSlotControls(true);
+
     if (resultNav) {
       resultNav.classList.toggle("is-visible", totalPages > 1);
     }
@@ -4032,6 +4134,471 @@ function refreshArticleMissing(article, medication) {
     goToResultPage(total, total);
   });
 
+  function syncCalendarSlotControls(resetSelection) {
+    var eligible = [];
+    if (canShowConfirmedSchedule() && confirmedSchedule && resultCard && resultCard.style.display !== "none" && !isProcessing) {
+      eligible = getEligibleCalendarSlots(confirmedSchedule);
+    }
+
+    var morningEnabled = document.getElementById("calendarMorningEnabled");
+    var morningTime = document.getElementById("calendarMorningTime");
+    var noonEnabled = document.getElementById("calendarNoonEnabled");
+    var noonTime = document.getElementById("calendarNoonTime");
+    var eveningEnabled = document.getElementById("calendarEveningEnabled");
+    var eveningTime = document.getElementById("calendarEveningTime");
+    var bedtimeEnabled = document.getElementById("calendarBedtimeEnabled");
+    var bedtimeTime = document.getElementById("calendarBedtimeTime");
+
+    var morningEligible = eligible.indexOf("morning") !== -1;
+    var noonEligible = eligible.indexOf("noon") !== -1;
+    var eveningEligible = eligible.indexOf("evening") !== -1;
+    var bedtimeEligible = eligible.indexOf("bedtime") !== -1;
+
+    if (morningEnabled) {
+      morningEnabled.disabled = !morningEligible;
+      if (resetSelection || !morningEligible) {
+        morningEnabled.checked = false;
+      }
+    }
+    if (noonEnabled) {
+      noonEnabled.disabled = !noonEligible;
+      if (resetSelection || !noonEligible) {
+        noonEnabled.checked = false;
+      }
+    }
+    if (eveningEnabled) {
+      eveningEnabled.disabled = !eveningEligible;
+      if (resetSelection || !eveningEligible) {
+        eveningEnabled.checked = false;
+      }
+    }
+    if (bedtimeEnabled) {
+      bedtimeEnabled.disabled = !bedtimeEligible;
+      if (resetSelection || !bedtimeEligible) {
+        bedtimeEnabled.checked = false;
+      }
+    }
+
+    if (morningTime) {
+      morningTime.disabled = !(morningEligible && morningEnabled && morningEnabled.checked);
+    }
+    if (noonTime) {
+      noonTime.disabled = !(noonEligible && noonEnabled && noonEnabled.checked);
+    }
+    if (eveningTime) {
+      eveningTime.disabled = !(eveningEligible && eveningEnabled && eveningEnabled.checked);
+    }
+    if (bedtimeTime) {
+      bedtimeTime.disabled = !(bedtimeEligible && bedtimeEnabled && bedtimeEnabled.checked);
+    }
+
+    refreshCalendarValidation();
+  }
+
+  function refreshCalendarValidation() {
+    var panel = document.getElementById("calendarReminderPanel");
+    if (!panel) {
+      return;
+    }
+
+    var panelVisible = panel.style.display !== "none";
+    var scheduleReady = canShowConfirmedSchedule() && confirmedSchedule && resultCard && resultCard.style.display !== "none" && !isProcessing;
+
+    var startTimeEl = document.getElementById("calendarStartDate");
+    var endTimeEl = document.getElementById("calendarEndDate");
+    var slotGroupEl = document.getElementById("calendarSlotGroup");
+    var morningTimeEl = document.getElementById("calendarMorningTime");
+    var noonTimeEl = document.getElementById("calendarNoonTime");
+    var eveningTimeEl = document.getElementById("calendarEveningTime");
+    var bedtimeTimeEl = document.getElementById("calendarBedtimeTime");
+    var statusEl = document.getElementById("calendarValidationStatus");
+
+    var fieldEls = [
+      { field: "startDate", el: startTimeEl },
+      { field: "endDate", el: endTimeEl },
+      { field: "slots", el: slotGroupEl },
+      { field: "morningTime", el: morningTimeEl },
+      { field: "noonTime", el: noonTimeEl },
+      { field: "eveningTime", el: eveningTimeEl },
+      { field: "bedtimeTime", el: bedtimeTimeEl }
+    ];
+
+    var fieldToEl = {};
+    for (var i = 0; i < fieldEls.length; i++) {
+      var fe = fieldEls[i];
+      if (fe.el) {
+        fieldToEl[fe.field] = fe.el;
+      }
+    }
+
+    function clearCalendarErrors() {
+      for (var c = 0; c < fieldEls.length; c++) {
+        var ce = fieldEls[c];
+        var el = ce.el;
+        if (!el) continue;
+        el.classList.remove("calendar-invalid");
+        el.removeAttribute("aria-invalid");
+        var existingDescribedBy = el.getAttribute("aria-describedby");
+        var kept = [];
+        if (typeof existingDescribedBy === "string" && existingDescribedBy.length > 0) {
+          var parts = existingDescribedBy.split(/\s+/);
+          for (var p = 0; p < parts.length; p++) {
+            if (parts[p].length > 0 && parts[p] !== (ce.el.id + "Error")) {
+              kept.push(parts[p]);
+            }
+          }
+        }
+        if (kept.length > 0) {
+          el.setAttribute("aria-describedby", kept.join(" "));
+        } else {
+          el.removeAttribute("aria-describedby");
+        }
+      }
+
+      var existingMsgs = panel.querySelectorAll(".calendar-invalid-msg");
+      for (var m = 0; m < existingMsgs.length; m++) {
+        if (existingMsgs[m].parentElement) {
+          existingMsgs[m].parentElement.removeChild(existingMsgs[m]);
+        }
+      }
+    }
+
+    var previewEl = document.getElementById("calendarReminderPreview");
+    if (previewEl) {
+      previewEl.style.display = "none";
+      previewEl.replaceChildren();
+    }
+
+    if (!panelVisible || !scheduleReady) {
+      clearCalendarErrors();
+      if (statusEl) {
+        statusEl.textContent = "";
+      }
+      return;
+    }
+
+    var eligibleSlots = [];
+    if (scheduleReady) {
+      eligibleSlots = getEligibleCalendarSlots(confirmedSchedule);
+    }
+
+    if (Array.isArray(eligibleSlots) && eligibleSlots.length > 0) {
+      clearCalendarErrors();
+
+      var startDate = "";
+      var endDate = "";
+      if (startTimeEl && typeof startTimeEl.value === "string") {
+        startDate = startTimeEl.value;
+      }
+      if (endTimeEl && typeof endTimeEl.value === "string") {
+        endDate = endTimeEl.value;
+      }
+
+      var checkedSlots = [];
+      var slotKeys = ["morning", "noon", "evening", "bedtime"];
+      var enabledIds = {
+        morning: "calendarMorningEnabled",
+        noon: "calendarNoonEnabled",
+        evening: "calendarEveningEnabled",
+        bedtime: "calendarBedtimeEnabled"
+      };
+      var timeIds = {
+        morning: "calendarMorningTime",
+        noon: "calendarNoonTime",
+        evening: "calendarEveningTime",
+        bedtime: "calendarBedtimeTime"
+      };
+      for (var s = 0; s < slotKeys.length; s++) {
+        var key = slotKeys[s];
+        var enabledEl = document.getElementById(enabledIds[key]);
+        var timeEl = document.getElementById(timeIds[key]);
+        if (enabledEl && enabledEl.checked) {
+          var timeValue = timeEl && typeof timeEl.value === "string" ? timeEl.value : "";
+          checkedSlots.push({ slot: key, time: timeValue });
+        }
+      }
+
+      var validation = validateCalendarReminderSettings(
+        { startDate: startDate, endDate: endDate, slots: checkedSlots },
+        eligibleSlots
+      );
+
+      var errors = validation.errors || {};
+      var errorFields = Object.keys(errors);
+
+      var hasError = errorFields.length > 0;
+      if (statusEl) {
+        statusEl.textContent = hasError
+          ? "날짜와 선택한 확인 시간을 확인해 주세요."
+          : "입력 내용을 확인했습니다.";
+      }
+
+      for (var e = 0; e < errorFields.length; e++) {
+        var field = errorFields[e];
+        var message = errors[field];
+        if (typeof message !== "string" || message.length === 0) continue;
+
+        var targetEl = fieldToEl[field];
+        if (!targetEl) continue;
+
+        var errorId = targetEl.id + "Error";
+        targetEl.classList.add("calendar-invalid");
+        targetEl.setAttribute("aria-invalid", "true");
+
+        var existingDescribedBy = targetEl.getAttribute("aria-describedby");
+        var describedByParts = [];
+        if (typeof existingDescribedBy === "string" && existingDescribedBy.length > 0) {
+          var parts2 = existingDescribedBy.split(/\s+/);
+          for (var pb = 0; pb < parts2.length; pb++) {
+            if (parts2[pb].length > 0) {
+              describedByParts.push(parts2[pb]);
+            }
+          }
+        }
+        if (describedByParts.indexOf(errorId) === -1) {
+          describedByParts.push(errorId);
+        }
+        targetEl.setAttribute("aria-describedby", describedByParts.join(" "));
+
+        var errorMsgEl = document.createElement("div");
+        errorMsgEl.className = "calendar-invalid-msg screen-only";
+        errorMsgEl.id = errorId;
+        errorMsgEl.textContent = message;
+
+        if (targetEl.parentNode) {
+          targetEl.parentNode.insertBefore(errorMsgEl, targetEl.nextSibling);
+        } else {
+          panel.appendChild(errorMsgEl);
+        }
+      }
+    } else {
+      clearCalendarErrors();
+      if (statusEl) {
+        statusEl.textContent = "캘린더에 추가할 매일 복용 시간대가 없습니다.";
+      }
+    }
+
+    if (panelVisible && scheduleReady && Array.isArray(eligibleSlots) && eligibleSlots.length > 0 && hasError === false && previewEl) {
+      var startDateText = startTimeEl ? startTimeEl.value : "";
+      var endDateText = endTimeEl ? endTimeEl.value : "";
+
+      var sortedCheckedSlots = [];
+      var slotOrder = ["morning", "noon", "evening", "bedtime"];
+      for (var si = 0; si < slotOrder.length; si++) {
+        for (var sj = 0; sj < checkedSlots.length; sj++) {
+          if (checkedSlots[sj].slot === slotOrder[si]) {
+            sortedCheckedSlots.push(checkedSlots[sj]);
+            break;
+          }
+        }
+      }
+
+      previewEl.style.display = "block";
+      var titleEl = document.createElement("div");
+      titleEl.style.cssText = "font-size:clamp(14pt,2.6vw,16pt); font-weight:700; color:#1A202C; margin-bottom:8px;";
+      titleEl.textContent = "캘린더에 추가할 확인 일정";
+      previewEl.appendChild(titleEl);
+
+      var dateRow = document.createElement("div");
+      dateRow.style.cssText = "font-size:clamp(14pt,2.6vw,16pt); font-weight:600; color:#1A202C; margin-bottom:6px;";
+      var dateParts = [];
+      if (startDateText && startDateText.length > 0) {
+        dateParts.push("시작일: " + startDateText);
+      }
+      if (endDateText && endDateText.length > 0) {
+        dateParts.push("종료일: " + endDateText);
+      }
+      dateRow.textContent = dateParts.join("  ·  ");
+      previewEl.appendChild(dateRow);
+
+      if (sortedCheckedSlots.length > 0) {
+        var slotRow = document.createElement("div");
+        slotRow.style.cssText = "font-size:clamp(14pt,2.6vw,16pt); font-weight:600; color:#1A202C; margin-bottom:6px;";
+        var slotParts = [];
+        var slotLabelMap = {
+          morning: "아침",
+          noon: "점심",
+          evening: "저녁",
+          bedtime: "자기 전"
+        };
+        for (var sk = 0; sk < sortedCheckedSlots.length; sk++) {
+          var entry = sortedCheckedSlots[sk];
+          var label = slotLabelMap[entry.slot] || entry.slot;
+          var timeText = entry.time && entry.time.length > 0 ? entry.time : "";
+          slotParts.push(label + " — " + (timeText || "시각 미입력"));
+        }
+        slotRow.textContent = slotParts.join("  ·  ");
+        previewEl.appendChild(slotRow);
+      }
+
+      var note1 = document.createElement("div");
+      note1.style.cssText = "font-size:clamp(13pt,2.4vw,15pt); font-weight:500; color:#4A5568; line-height:1.6; margin-top:4px;";
+      note1.textContent = "선택한 기간 동안 매일 반복되는 확인 일정입니다. 약별 복용 종료일을 자동으로 반영하지 않습니다.";
+      previewEl.appendChild(note1);
+
+      var note2 = document.createElement("div");
+      note2.style.cssText = "font-size:clamp(13pt,2.4vw,15pt); font-weight:500; color:#4A5568; line-height:1.6;";
+      note2.textContent = "캘린더에 추가한 뒤 기기의 알림 설정을 확인해 주세요.";
+      previewEl.appendChild(note2);
+    }
+  }
+
+  var calendarMorningEnabledEl = document.getElementById("calendarMorningEnabled");
+  var calendarNoonEnabledEl = document.getElementById("calendarNoonEnabled");
+  var calendarEveningEnabledEl = document.getElementById("calendarEveningEnabled");
+  var calendarBedtimeEnabledEl = document.getElementById("calendarBedtimeEnabled");
+
+  if (calendarMorningEnabledEl) {
+    calendarMorningEnabledEl.addEventListener("change", function () {
+      syncCalendarSlotControls(false);
+    });
+  }
+  if (calendarNoonEnabledEl) {
+    calendarNoonEnabledEl.addEventListener("change", function () {
+      syncCalendarSlotControls(false);
+    });
+  }
+  if (calendarEveningEnabledEl) {
+    calendarEveningEnabledEl.addEventListener("change", function () {
+      syncCalendarSlotControls(false);
+    });
+  }
+  if (calendarBedtimeEnabledEl) {
+    calendarBedtimeEnabledEl.addEventListener("change", function () {
+      syncCalendarSlotControls(false);
+    });
+  }
+
+  function validateCalendarReminderSettings(settings, eligibleSlots) {
+    var errors = {};
+
+    function isArrayOfStrings(value) {
+      if (!Array.isArray(value)) return false;
+      for (var i = 0; i < value.length; i++) {
+        if (typeof value[i] !== "string") return false;
+      }
+      return true;
+    }
+
+    function isValidShortYearMonthDay(dateStr) {
+      if (typeof dateStr !== "string") return false;
+      if (!/^[12][0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(dateStr)) {
+        return false;
+      }
+      var parts = dateStr.split("-");
+      var year = Number(parts[0]);
+      var month = Number(parts[1]);
+      var day = Number(parts[2]);
+      if (!isFinite(year) || !isFinite(month) || !isFinite(day)) return false;
+      var date = new Date(Date.UTC(year, month - 1, day));
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+        return false;
+      }
+      return true;
+    }
+
+    function isValidHHMM(value) {
+      if (typeof value !== "string") return false;
+      if (!/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(value)) return false;
+      return true;
+    }
+
+    if (!Array.isArray(eligibleSlots) || !isArrayOfStrings(eligibleSlots)) {
+      errors.slots = "확인된 매일 복용 시간대가 올바르지 않습니다.";
+      return { valid: false, errors: errors };
+    }
+
+    if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+      errors.startDate = "시작일을 올바른 형식으로 입력해 주세요.";
+      errors.endDate = "종료일을 올바른 형식으로 입력해 주세요.";
+      errors.slots = "선택한 캘린더 일정 항목이 올바르지 않습니다.";
+      return { valid: false, errors: errors };
+    }
+
+    var startDate = settings.startDate;
+    var endDate = settings.endDate;
+    var slots = settings.slots;
+
+    if (typeof startDate !== "string" || startDate.trim().length === 0) {
+      errors.startDate = "시작일을 입력해 주세요.";
+    } else if (!isValidShortYearMonthDay(startDate)) {
+      errors.startDate = "시작일이 올바른 날짜가 아닙니다.";
+    }
+
+    if (typeof endDate !== "string" || endDate.trim().length === 0) {
+      errors.endDate = "종료일을 입력해 주세요.";
+    } else if (!isValidShortYearMonthDay(endDate)) {
+      errors.endDate = "종료일이 올바른 날짜가 아닙니다.";
+    }
+
+    var startDateValid = typeof startDate === "string" && startDate.trim().length > 0 && isValidShortYearMonthDay(startDate);
+    var endDateValid = typeof endDate === "string" && endDate.trim().length > 0 && isValidShortYearMonthDay(endDate);
+
+    if (startDateValid && endDateValid) {
+      var startMs = Date.UTC(Number(startDate.split("-")[0]), Number(startDate.split("-")[1]) - 1, Number(startDate.split("-")[2]));
+      var endMs = Date.UTC(Number(endDate.split("-")[0]), Number(endDate.split("-")[1]) - 1, Number(endDate.split("-")[2]));
+
+      if (endMs < startMs) {
+        errors.endDate = "종료일은 시작일과 같거나 이후여야 합니다.";
+      }
+    }
+
+    if (!Array.isArray(slots) || slots.length === 0) {
+      errors.slots = "하나 이상의 확인 시간을 선택해 주세요.";
+      return { valid: false, errors: errors };
+    }
+
+    var seenSlots = {};
+    var slotTimeMap = {
+      morning: "morningTime",
+      noon: "noonTime",
+      evening: "eveningTime",
+      bedtime: "bedtimeTime"
+    };
+
+    for (var i = 0; i < slots.length; i++) {
+      var entry = slots[i];
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        errors.slots = "선택한 캘린더 일정 항목이 올바르지 않습니다.";
+        return { valid: false, errors: errors };
+      }
+      var slot = entry.slot;
+      var time = entry.time;
+      if (typeof slot !== "string" || slot.trim().length === 0) {
+        errors.slots = "선택한 캘린더 일정 항목이 올바르지 않습니다.";
+        return { valid: false, errors: errors };
+      }
+      if (!slotTimeMap.hasOwnProperty(slot)) {
+        errors.slots = "선택할 수 없는 확인 시간이 포함되어 있습니다.";
+        return { valid: false, errors: errors };
+      }
+      if (Array.isArray(eligibleSlots) && eligibleSlots.indexOf(slot) !== -1) {
+        // 허용된 시간대임
+      } else {
+        errors.slots = "확인된 매일 복용 시간대만 선택할 수 있습니다.";
+        return { valid: false, errors: errors };
+      }
+      if (seenSlots.hasOwnProperty(slot)) {
+        errors.slots = "같은 확인 시간을 여러 번 선택할 수 없습니다.";
+        return { valid: false, errors: errors };
+      }
+      seenSlots[slot] = true;
+
+      var timeKey = slotTimeMap[slot];
+      if (typeof time !== "string" || time.trim().length === 0) {
+        errors[timeKey] = "확인할 시각을 입력해 주세요.";
+      } else if (!isValidHHMM(time)) {
+        errors[timeKey] = "확인할 시각이 올바른 형식이 아닙니다.";
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return { valid: false, errors: errors };
+    }
+
+    return { valid: true, errors: {} };
+  }
+
   function buildShareTextFromSchedule(schedule) {
     if (!schedule) {
       return "";
@@ -4667,6 +5234,97 @@ function refreshArticleMissing(article, medication) {
         updatingDocumentReview = false;
       }
     });
+
+  function getEligibleCalendarSlots(schedule) {
+    if (!schedule || typeof schedule !== "object") {
+      return [];
+    }
+
+    var morning = schedule.morning;
+    var noon = schedule.noon;
+    var evening = schedule.evening;
+    var others = schedule.others;
+
+    if (!Array.isArray(morning) || !Array.isArray(noon) ||
+        !Array.isArray(evening) || !Array.isArray(others)) {
+      return [];
+    }
+
+    var result = [];
+
+    if (hasDailyWithTimeSlot(morning, "morning")) {
+      result.push("morning");
+    }
+    if (hasDailyWithTimeSlot(noon, "noon")) {
+      result.push("noon");
+    }
+    if (hasDailyWithTimeSlot(evening, "evening")) {
+      result.push("evening");
+    }
+    if (hasDailyWithTimeSlot(others, "bedtime")) {
+      result.push("bedtime");
+    }
+
+    return result;
+  }
+
+  function hasDailyWithTimeSlot(medications, slotName) {
+    for (var i = 0; i < medications.length; i++) {
+      var med = medications[i];
+      if (!med || typeof med !== "object") {
+        continue;
+      }
+      if (med.scheduleType !== "daily") {
+        continue;
+      }
+      var timeSlots = med.timeSlots;
+      if (!Array.isArray(timeSlots)) {
+        continue;
+      }
+      if (timeSlots.indexOf(slotName) !== -1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var calendarStartDateEl = document.getElementById("calendarStartDate");
+  var calendarEndDateEl = document.getElementById("calendarEndDate");
+  var calendarMorningTimeEl = document.getElementById("calendarMorningTime");
+  var calendarNoonTimeEl = document.getElementById("calendarNoonTime");
+  var calendarEveningTimeEl = document.getElementById("calendarEveningTime");
+  var calendarBedtimeTimeEl = document.getElementById("calendarBedtimeTime");
+
+  function wireCalendarValidationEvents() {
+    if (calendarStartDateEl) {
+      calendarStartDateEl.addEventListener("input", refreshCalendarValidation);
+      calendarStartDateEl.addEventListener("change", refreshCalendarValidation);
+    }
+    if (calendarEndDateEl) {
+      calendarEndDateEl.addEventListener("input", refreshCalendarValidation);
+      calendarEndDateEl.addEventListener("change", refreshCalendarValidation);
+    }
+    if (calendarMorningTimeEl) {
+      calendarMorningTimeEl.addEventListener("input", refreshCalendarValidation);
+      calendarMorningTimeEl.addEventListener("change", refreshCalendarValidation);
+    }
+    if (calendarNoonTimeEl) {
+      calendarNoonTimeEl.addEventListener("input", refreshCalendarValidation);
+      calendarNoonTimeEl.addEventListener("change", refreshCalendarValidation);
+    }
+    if (calendarEveningTimeEl) {
+      calendarEveningTimeEl.addEventListener("input", refreshCalendarValidation);
+      calendarEveningTimeEl.addEventListener("change", refreshCalendarValidation);
+    }
+    if (calendarBedtimeTimeEl) {
+      calendarBedtimeTimeEl.addEventListener("input", refreshCalendarValidation);
+      calendarBedtimeTimeEl.addEventListener("change", refreshCalendarValidation);
+    }
+  }
+
+  wireCalendarValidationEvents();
+  refreshCalendarValidation();
+
   })();
 
 </script>
