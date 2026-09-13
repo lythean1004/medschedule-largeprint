@@ -525,6 +525,7 @@
 
     #resultNav,
     #shareStatus,
+    #imageExportStatus,
     #sharePreview,
     #copyFallback,
     #confirmedStatus,
@@ -1021,7 +1022,10 @@
         <button type="button" id="copyBtn" class="btn-secondary" disabled>내용 복사</button>
         <button type="button" id="backToEditBtn" class="btn-secondary">내용 다시 수정</button>
         <button type="button" id="printBtn" class="btn-secondary" disabled>인쇄 / 저장</button>
+        <button type="button" id="saveCardImageBtn" class="btn-secondary" disabled>현재 카드 이미지 저장</button>
       </div>
+
+      <div id="imageExportStatus" role="status" aria-live="polite" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
       <div id="shareStatus" role="status" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
@@ -1221,6 +1225,8 @@
   var sharePreviewText = document.getElementById("sharePreviewText");
   var copyFallback = document.getElementById("copyFallback");
   var copyFallbackText = document.getElementById("copyFallbackText");
+  var saveCardImageBtn = document.getElementById("saveCardImageBtn");
+  var imageExportStatus = document.getElementById("imageExportStatus");
 
   function setProcessing(active) {
     isProcessing = active;
@@ -1237,6 +1243,7 @@
     if (analyzePhotoBtn) analyzePhotoBtn.setAttribute("aria-busy", String(active));
     if (rotateLeftBtn) rotateLeftBtn.setAttribute("aria-busy", String(active));
     if (rotateRightBtn) rotateRightBtn.setAttribute("aria-busy", String(active));
+    updateExportButtonIfReady();
   }
 
   function setShareStatus(message) {
@@ -1252,6 +1259,219 @@
     status.style.display = "none";
   }
 
+  function createCardImageBlob(cardElement) {
+    try {
+      if (!cardElement) {
+        return Promise.reject(new Error("카드 요소가 유효하지 않습니다."));
+      }
+      var cls = cardElement.className && String(cardElement.className);
+      if (!cls || cls.split(/\s+/).indexOf("result-card-page") === -1) {
+        return Promise.reject(new Error("단일 결과 카드 페이지를 전달해야 합니다."));
+      }
+      if (typeof cardElement.querySelectorAll !== "function") {
+        return Promise.reject(new Error("카드 요소가 유효하지 않습니다."));
+      }
+
+      var TARGET_CLASSES = ["result-card-page-title","result-card-page-sub","result-card-page-med-name","result-card-page-med-detailed","result-card-page-empty"];
+      var targetSet = {};
+      TARGET_CLASSES.forEach(function (c) { targetSet[c] = true; });
+
+      var childClassMatch = function (node) {
+        if (node.nodeType !== 1) return null;
+        var cls2 = node.className && String(node.className);
+        if (!cls2) return null;
+        var parts = cls2.split(/\s+/);
+        for (var i = 0; i < parts.length; i++) {
+          if (targetSet[parts[i]]) return parts[i];
+        }
+        return null;
+      };
+
+      var collected = [];
+      var targets = cardElement.querySelectorAll(
+        TARGET_CLASSES.map(function (name) { return "." + name; }).join(",")
+      );
+      targets.forEach(function (el) {
+        var kind = childClassMatch(el);
+        if (!kind) return;
+        var ancestor = el.parentElement;
+        while (ancestor) {
+          if (ancestor === cardElement) break;
+          if (childClassMatch(ancestor)) return;
+          ancestor = ancestor.parentElement;
+        }
+        var text = el.textContent;
+        if (typeof text !== "string") text = String(text);
+        collected.push({ kind: kind, text: text });
+      });
+
+      if (collected.length === 0) {
+        return Promise.reject(new Error("이미지에 포함할 텍스트가 없습니다."));
+      }
+
+      var canvas = document.createElement("canvas");
+      var ctx = canvas.getContext && canvas.getContext("2d");
+      if (!ctx || typeof ctx.fillRect !== "function" || typeof ctx.measureText !== "function") {
+        return Promise.reject(new Error("캔버스 그림판을 만들 수 없습니다."));
+      }
+
+      var MAX_WIDTH = 1200;
+      var MARGIN = 60;
+      var MAX_TEXT_WIDTH = MAX_WIDTH - MARGIN * 2;
+      if (MAX_TEXT_WIDTH <= 0) {
+        return Promise.reject(new Error("캔버스 너비가 너무 작습니다."));
+      }
+
+      var FONT_TITLE = "bold 40px sans-serif";
+      var FONT_SUB = "600 28px sans-serif";
+      var FONT_MEDNAME = "bold 34px sans-serif";
+      var FONT_MEDDETAIL = "28px sans-serif";
+      var FONT_EMPTY = "500 26px sans-serif";
+      var FONT_FOOTER = "500 24px sans-serif";
+
+      var LINE_HEIGHT = 56;
+      var TOP_MARGIN = 80;
+      var BOTTOM_MARGIN = 80;
+      var FOOTER_BLOCK_TOP_MARGIN = 60;
+      var FOOTER_LINE_HEIGHT = 48;
+
+      var footerText = "사용자가 원본과 대조해 정리한 시간표입니다.\n먹는 방법을 바꾸거나 궁금한 점이 있으면 약사님께 여쭤보세요.";
+
+      var wrapText = function (text, font, maxWidth) {
+        ctx.font = font;
+        var lines = [];
+        var paragraphs = (text === null || text === undefined) ? [""] : String(text).split(/\r?\n/);
+        paragraphs.forEach(function (para) {
+          if (para === "") {
+            lines.push("");
+            return;
+          }
+          var i = 0;
+          var current = "";
+          while (i < para.length) {
+            var ch = para[i];
+            var trial = current + ch;
+            if (ctx.measureText(trial).width <= maxWidth || current === "") {
+              current = trial;
+              i++;
+              continue;
+            }
+            if (current !== "") {
+              lines.push(current);
+            }
+            current = ch;
+            i++;
+          }
+          if (current !== "") lines.push(current);
+        });
+        return lines;
+      };
+
+      var wrapped = [];
+      collected.forEach(function (item) {
+        var font = FONT_MEDDETAIL;
+        var kind = item.kind;
+        if (kind === "result-card-page-title") font = FONT_TITLE;
+        else if (kind === "result-card-page-sub") font = FONT_SUB;
+        else if (kind === "result-card-page-med-name") font = FONT_MEDNAME;
+        else if (kind === "result-card-page-med-detailed") font = FONT_MEDDETAIL;
+        else if (kind === "result-card-page-empty") font = FONT_EMPTY;
+
+        var chunks = wrapText(item.text, font, MAX_TEXT_WIDTH);
+        chunks.forEach(function (line) {
+          wrapped.push({ kind: kind, text: line });
+        });
+      });
+
+      var footerWrapped = wrapText(footerText, FONT_FOOTER, MAX_TEXT_WIDTH);
+      var bodyLines = wrapped.length;
+      var footerLines = footerWrapped.length;
+      var totalLines = bodyLines + footerLines;
+      if (!isFinite(totalLines) || totalLines < 1) {
+        return Promise.reject(new Error("줄 수 계산이 잘못됐습니다."));
+      }
+
+      var bodyHeight = bodyLines * LINE_HEIGHT;
+      var footerHeight = footerLines * FOOTER_LINE_HEIGHT;
+      var canvasHeight = TOP_MARGIN + bodyHeight + FOOTER_BLOCK_TOP_MARGIN + footerHeight + BOTTOM_MARGIN;
+
+      if (!isFinite(canvasHeight) || canvasHeight <= 0) {
+        return Promise.reject(new Error("캔버스 높이 계산이 잘못됐습니다."));
+      }
+
+      if (MAX_WIDTH > 2000 || canvasHeight > 16000) {
+        return Promise.reject(new Error("이미지가 너무 큽니다."));
+      }
+
+      canvas.width = Math.round(MAX_WIDTH);
+      canvas.height = Math.round(canvasHeight);
+      if (canvas.width <= 0 || canvas.height <= 0) {
+        return Promise.reject(new Error("캔버스 크기가 유효하지 않습니다."));
+      }
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      var y = TOP_MARGIN;
+      var drawWrapped = function (items, font, lineHeight) {
+        items.forEach(function (item) {
+          ctx.font = font;
+          ctx.fillStyle = "#000000";
+          if (y + lineHeight > canvas.height) {
+            throw new Error("이미지 그리기 공간이 부족합니다.");
+          }
+          ctx.fillText(item.text, MARGIN, y);
+          y += lineHeight;
+        });
+      };
+
+      wrapped.forEach(function (item) {
+        var font = FONT_MEDDETAIL;
+        var lineHeight = LINE_HEIGHT;
+        if (item.kind === "result-card-page-title") { font = FONT_TITLE; }
+        else if (item.kind === "result-card-page-sub") { font = FONT_SUB; }
+        else if (item.kind === "result-card-page-med-name") { font = FONT_MEDNAME; }
+        else if (item.kind === "result-card-page-med-detailed") { font = FONT_MEDDETAIL; }
+        else if (item.kind === "result-card-page-empty") { font = FONT_EMPTY; }
+        drawWrapped([item], font, lineHeight);
+      });
+
+      var footerY = y + FOOTER_BLOCK_TOP_MARGIN;
+      ctx.font = FONT_FOOTER;
+      ctx.fillStyle = "#000000";
+      footerWrapped.forEach(function (line) {
+        if (footerY + FOOTER_LINE_HEIGHT > canvas.height) {
+          throw new Error("이미지 그리기 공간이 부족합니다.");
+        }
+        ctx.fillText(line, MARGIN, footerY);
+        footerY += FOOTER_LINE_HEIGHT;
+      });
+
+      return new Promise(function (resolve, reject) {
+        if (typeof canvas.toBlob !== "function") {
+          reject(new Error("PNG 변환을 지원하지 않습니다."));
+          return;
+        }
+        try {
+          canvas.toBlob(function (blob) {
+            try {
+              if (!blob || typeof blob.size !== "number" || blob.size <= 0) {
+                reject(new Error("PNG 변환 결과가 비어 있습니다."));
+                return;
+              }
+              resolve(blob);
+            } catch (e) {
+              reject(new Error("PNG 변환 결과를 확인하지 못했습니다."));
+            }
+          }, "image/png");
+        } catch (e) {
+          reject(new Error("PNG 변환 중 오류가 발생했습니다."));
+        }
+      });
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
   function showErr(msg) {
     clearMedicationDraft();
     resultCard.style.display = "none";
@@ -2188,6 +2408,7 @@ function refreshArticleMissing(article, medication) {
       cards.children.length === 4;
 
     printBtn.disabled = !ready;
+    updateExportButtonIfReady();
   }
 
   function refreshConfirmedPreview() {
@@ -3907,6 +4128,191 @@ function refreshArticleMissing(article, medication) {
 
     shareBtn.disabled = false;
     copyBtn.disabled = false;
+  }
+
+  function updateExportButtonIfReady() {
+    if (!saveCardImageBtn) return;
+
+    var cards = document.getElementById("resultCards");
+    var ready =
+      !isProcessing &&
+      !exportInProgress &&
+      canShowConfirmedSchedule() &&
+      confirmedSchedule !== null &&
+      !!resultCard &&
+      resultCard.style.display !== "none" &&
+      !!cards &&
+      cards.children.length === 4;
+
+    saveCardImageBtn.disabled = !ready;
+  }
+
+  var exportInProgress = false;
+  var currentExportAbort = null;
+
+  function clearExportState() {
+    if (currentExportAbort) {
+      currentExportAbort.cancelled = true;
+    }
+    if (imageExportStatus) {
+      imageExportStatus.textContent = "";
+      imageExportStatus.style.display = "none";
+    }
+    updateExportButtonIfReady();
+  }
+
+  function currentResultCardPage() {
+    var cards = document.getElementById("resultCards");
+    if (!cards || cards.children.length !== 4) return null;
+
+    var index = getCurrentPageIndex(4);
+    if (!Number.isInteger(index) || index < 1 || index > 4) {
+      return null;
+    }
+
+    return cards.children[index - 1];
+  }
+
+  function downloadBlobAsPNG(blob, filename) {
+    if (!blob || blob.size === 0) {
+      return Promise.reject(new Error("다운로드할 데이터가 없습니다."));
+    }
+
+    return new Promise(function (resolve, reject) {
+      var url = null;
+      try {
+        url = URL.createObjectURL(blob);
+      } catch (e) {
+        return reject(new Error("이미지 URL 생성에 실패했습니다."));
+      }
+
+      var a = null;
+      try {
+        a = document.createElement("a");
+        a.href = url;
+        a.download = filename || "약먹는시간표.png";
+        a.style.display = "none";
+        document.body.appendChild(a);
+      } catch (e) {
+        try { URL.revokeObjectURL(url); } catch (e2) {}
+        return reject(new Error("다운로드 링크를 준비하지 못했습니다."));
+      }
+
+      try {
+        a.click();
+      } catch (e) {
+        if (a && a.parentNode) {
+          try { a.parentNode.removeChild(a); } catch (e2) {}
+        }
+        try { URL.revokeObjectURL(url); } catch (e2) {}
+        return reject(new Error("다운로드 링크 클릭에 실패했습니다."));
+      }
+
+      if (a && a.parentNode) {
+        try { a.parentNode.removeChild(a); } catch (e) {}
+      }
+
+      setTimeout(function () {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      }, 60000);
+
+      resolve();
+    });
+  }
+
+  saveCardImageBtn.addEventListener("click", function () {
+    updateExportButtonIfReady();
+    if (!saveCardImageBtn || saveCardImageBtn.disabled) return;
+
+    var cardEl = currentResultCardPage();
+    if (!cardEl) {
+      if (typeof setShareStatus === "function") setShareStatus("시간표를 먼저 확인해 주세요.");
+      return;
+    }
+
+    var snapshot = confirmedSchedule;
+    var job = { cancelled: false };
+    currentExportAbort = job;
+    exportInProgress = true;
+    updateExportButtonIfReady();
+
+    if (imageExportStatus) {
+      imageExportStatus.textContent = "카드 이미지를 만들고 있습니다.";
+      imageExportStatus.style.display = "block";
+    }
+
+    var filenameBase = "";
+    var titleEl = cardEl.querySelector(".result-card-page-title");
+    if (titleEl) {
+      var t = titleEl.textContent;
+      if (typeof t === "string" && t.trim().length > 0) {
+        filenameBase = t.trim().replace(/[^a-zA-Z0-9가-힣]/g, "_");
+      }
+    }
+    var filename = filenameBase ? ("약먹는시간표_" + filenameBase + ".png") : "약먹는시간표.png";
+
+    Promise.resolve().then(function () {
+      if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
+        return;
+      }
+      return createCardImageBlob(cardEl);
+    }).then(function (blob) {
+      if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
+        return;
+      }
+      return downloadBlobAsPNG(blob, filename);
+    }).then(function () {
+      if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
+        return;
+      }
+      if (imageExportStatus) {
+        imageExportStatus.textContent = "이미지 다운로드를 요청했습니다.\n브라우저의 다운로드 항목을 확인해 주세요.";
+        imageExportStatus.style.display = "block";
+      }
+    }).catch(function (err) {
+      if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
+        return;
+      }
+      if (imageExportStatus) {
+        var msg = err && err.message ? err.message : "카드 이미지 저장에 실패했습니다.";
+        imageExportStatus.textContent = msg;
+        imageExportStatus.style.display = "block";
+      }
+    }).finally(function () {
+      if (currentExportAbort === job) {
+        exportInProgress = false;
+        currentExportAbort = null;
+        updateExportButtonIfReady();
+      }
+    });
+  });
+
+  if (typeof updateShareButtonsIfReady === "function") {
+    var origUpdateShareButtonsIfReady = updateShareButtonsIfReady;
+    updateShareButtonsIfReady = function () {
+      origUpdateShareButtonsIfReady();
+      clearExportState();
+      updateExportButtonIfReady();
+    };
+  }
+
+  if (typeof refreshConfirmedPreview === "function") {
+    var origRefreshConfirmedPreview = refreshConfirmedPreview;
+    refreshConfirmedPreview = function () {
+      var result = origRefreshConfirmedPreview.apply(this, arguments);
+      clearExportState();
+      updateExportButtonIfReady();
+      return result;
+    };
+  }
+
+  if (typeof renderMedicationDraft === "function") {
+    var origRenderMedicationDraft = renderMedicationDraft;
+    renderMedicationDraft = function () {
+      origRenderMedicationDraft.apply(this, arguments);
+      clearExportState();
+      updateExportButtonIfReady();
+    };
   }
 
   function renderSharePreview(schedule) {
