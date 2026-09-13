@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+<title id="title">약 먹는 시간표</title><desc id="desc">원본과 대조하고 큰 글씨로 함께 확인하는 서비스의 소개 배너. 실제 화면이 아닌 개념 일러스트입니다.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#112844"/><stop offset="1" stop-color="#164F67"/></linearGradient></defs>
+<rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+<circle cx="1100" cy="20" r="180" fill="#FFFFFF" opacity=".035"/>
+<g font-family="Noto Sans KR, Apple SD Gothic Neo, Malgun Gothic, sans-serif">
+<text x="56" y="70" fill="#9EDBCB" font-size="17" letter-spacing="2">MEDICINE SCHEDULE · LARGE PRINT</text>
+<text x="56" y="139" fill="#FFFFFF" font-size="48" font-weight="700">약 먹는 시간표</text>
+<text x="56" y="188" fill="#D9E8EF" font-size="22">원본과 대조하고, 큰 글씨로 함께 확인합니다.</text>
+<text x="56" y="229" fill="#B6CFDB" font-size="17">사진 확인  ·  보호자 대조  ·  카드 탐색  ·  공유와 인쇄</text>
+<rect x="56" y="270" width="260" height="38" rx="19" fill="#FFFFFF" opacity=".1"/>
+<text x="76" y="295" fill="#FFFFFF" font-size="15">사용자 확인을 거치는 약별 초안</text>
+<g transform="translate(735,80)">
+<rect width="182" height="101" rx="16" fill="#FFF8E6"/><text x="20" y="37" fill="#876021" font-size="21" font-weight="700">아침</text><rect x="20" y="56" width="116" height="8" rx="4" fill="#DDC68E"/><rect x="20" y="73" width="85" height="6" rx="3" fill="#DDC68E" opacity=".6"/>
+<g transform="translate(200,0)"><rect width="182" height="101" rx="16" fill="#EEF8F3"/><text x="20" y="37" fill="#21634A" font-size="21" font-weight="700">점심</text><rect x="20" y="56" width="116" height="8" rx="4" fill="#ABD4BF"/><rect x="20" y="73" width="85" height="6" rx="3" fill="#ABD4BF" opacity=".6"/></g>
+<g transform="translate(0,119)"><rect width="182" height="101" rx="16" fill="#EDF3FF"/><text x="20" y="37" fill="#315D9A" font-size="21" font-weight="700">저녁</text><rect x="20" y="56" width="116" height="8" rx="4" fill="#B6CBE9"/><rect x="20" y="73" width="85" height="6" rx="3" fill="#B6CBE9" opacity=".6"/></g>
+<g transform="translate(200,119)"><rect width="182" height="101" rx="16" fill="#F1EDFA"/><text x="20" y="37" fill="#65508A" font-size="21" font-weight="700">그 외</text><rect x="20" y="56" width="116" height="8" rx="4" fill="#C9BCDF"/><rect x="20" y="73" width="85" height="6" rx="3" fill="#C9BCDF" opacity=".6"/></g>
+</g></g></svg>
