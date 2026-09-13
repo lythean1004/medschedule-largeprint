@@ -2022,11 +2022,9 @@ function refreshArticleMissing(article, medication) {
     }
 
     var conditionNotice = article.querySelector(".medication-condition-notice");
-    var conditionMissing = medication.scheduleType === "daily" &&
-      (typeof medication.values.timing !== "string" || medication.values.timing.trim().length === 0) &&
-      medication.timeSlots.length >= 1;
+    var timingInput = article.querySelector("#timing-" + medication.reviewId);
 
-    if (conditionMissing) {
+    if (timingInput) {
       if (!conditionNotice) {
         conditionNotice = document.createElement("p");
         conditionNotice.className = "medication-condition-notice";
@@ -2038,8 +2036,8 @@ function refreshArticleMissing(article, medication) {
         conditionNotice.style.background = "#F3F4F6";
         conditionNotice.style.borderRadius = "8px";
         conditionNotice.style.display = "block";
-        article.appendChild(conditionNotice);
       }
+      timingInput.insertAdjacentElement("afterend", conditionNotice);
       conditionNotice.textContent = "원본에 적힌 복용 조건이 있으면 입력해 주세요. 입력하지 않은 조건은 시간표에 포함되지 않습니다.";
     } else if (conditionNotice) {
       conditionNotice.remove();
