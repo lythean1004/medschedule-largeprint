@@ -937,6 +937,10 @@
       font-size: 18pt;
     }
   }
+
+  .medication-timing-input::placeholder {
+    color: #9CA3AF;
+  }
 </style>
 </head>
 <body>
@@ -1071,8 +1075,8 @@
   <div id="documentReview" style="margin-top:24px;">
     <label class="touch-checkbox-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px;">
       <input type="checkbox" id="documentConfirm" disabled class="touch-checkbox">
-      <span>원본의 약 목록과 대조해 빠진 약이 없는지 살폈고,
-      각 약의 내용과 문서 확인 사항까지 검토했습니다.</span>
+      <span>원본과 대조해 입력 내용·선택 시간대·빠진 약을 확인했습니다.
+      별도 입력하지 않은 복용 조건은 이 시간표에 포함되지 않음을 확인했습니다.</span>
     </label>
     <p id="documentReviewStatus" aria-live="polite"></p>
     <p>전체 확인을 마치면 큰 글씨 시간표를 보고 인쇄할 수 있습니다.</p>
@@ -1826,9 +1830,6 @@
     if (fieldMissingFromValues(values, "dose")) {
       missing.push({ id: "dose-" + reviewId, text: "1회 먹는 양을 원본에서 확인해 주세요." });
     }
-    if (fieldMissingFromValues(values, "timing")) {
-      missing.push({ id: "timing-" + reviewId, text: "복용 시점·조건을 원본에서 확인해 주세요." });
-    }
 
     if (scheduleType === "unresolved") {
       missing.push({ id: "type-" + reviewId, text: "복용 유형을 선택해 주세요." });
@@ -2018,6 +2019,30 @@ function refreshArticleMissing(article, medication) {
         confirmLabel.style.background = "";
         confirmLabel.style.borderRadius = "";
       }
+    }
+
+    var conditionNotice = article.querySelector(".medication-condition-notice");
+    var conditionMissing = medication.scheduleType === "daily" &&
+      (typeof medication.values.timing !== "string" || medication.values.timing.trim().length === 0) &&
+      medication.timeSlots.length >= 1;
+
+    if (conditionMissing) {
+      if (!conditionNotice) {
+        conditionNotice = document.createElement("p");
+        conditionNotice.className = "medication-condition-notice";
+        conditionNotice.style.color = "#6B7280";
+        conditionNotice.style.fontSize = "13pt";
+        conditionNotice.style.fontWeight = "500";
+        conditionNotice.style.marginTop = "8px";
+        conditionNotice.style.padding = "8px";
+        conditionNotice.style.background = "#F3F4F6";
+        conditionNotice.style.borderRadius = "8px";
+        conditionNotice.style.display = "block";
+        article.appendChild(conditionNotice);
+      }
+      conditionNotice.textContent = "원본에 적힌 복용 조건이 있으면 입력해 주세요. 입력하지 않은 조건은 시간표에 포함되지 않습니다.";
+    } else if (conditionNotice) {
+      conditionNotice.remove();
     }
   }
 
@@ -2412,13 +2437,27 @@ function refreshArticleMissing(article, medication) {
               detailedEl.appendChild(separator);
             }
 
-            if (m.timing) {
+            if (typeof m.timing === "string" && m.timing.trim().length > 0) {
               var labelSpan = document.createElement("span");
               labelSpan.className = "result-card-page-med-detailed-label";
               labelSpan.textContent = "복용 조건: ";
               var valueSpan = document.createElement("span");
               valueSpan.className = "result-card-page-med-detailed-value";
               valueSpan.textContent = m.timing;
+              detailedEl.appendChild(labelSpan);
+              detailedEl.appendChild(valueSpan);
+
+              var separator = document.createElement("span");
+              separator.className = "result-card-page-med-detailed-separator";
+              separator.textContent = "  ·  ";
+              detailedEl.appendChild(separator);
+            } else {
+              var labelSpan = document.createElement("span");
+              labelSpan.className = "result-card-page-med-detailed-label";
+              labelSpan.textContent = "복용 조건: ";
+              var valueSpan = document.createElement("span");
+              valueSpan.className = "result-card-page-med-detailed-value";
+              valueSpan.textContent = "별도 입력 없음";
               detailedEl.appendChild(labelSpan);
               detailedEl.appendChild(valueSpan);
 
@@ -2509,7 +2548,11 @@ function refreshArticleMissing(article, medication) {
 
             var detailed = [];
             if (m.dose) detailed.push("1회량: " + m.dose);
-            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (typeof m.timing === "string" && m.timing.trim().length > 0) {
+              detailed.push("복용 조건: " + m.timing);
+            } else {
+              detailed.push("복용 조건: 별도 입력 없음");
+            }
             if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
             if (m.duration) detailed.push("며칠분: " + m.duration);
 
@@ -2541,7 +2584,11 @@ function refreshArticleMissing(article, medication) {
 
             var detailed = [];
             if (m.dose) detailed.push("1회량: " + m.dose);
-            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (typeof m.timing === "string" && m.timing.trim().length > 0) {
+              detailed.push("복용 조건: " + m.timing);
+            } else {
+              detailed.push("복용 조건: 별도 입력 없음");
+            }
             if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
             if (m.duration) detailed.push("며칠분: " + m.duration);
 
@@ -2573,7 +2620,11 @@ function refreshArticleMissing(article, medication) {
 
             var detailed = [];
             if (m.dose) detailed.push("1회량: " + m.dose);
-            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (typeof m.timing === "string" && m.timing.trim().length > 0) {
+              detailed.push("복용 조건: " + m.timing);
+            } else {
+              detailed.push("복용 조건: 별도 입력 없음");
+            }
             if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
             if (m.duration) detailed.push("며칠분: " + m.duration);
 
@@ -2605,7 +2656,11 @@ function refreshArticleMissing(article, medication) {
 
             var detailed = [];
             if (m.dose) detailed.push("1회량: " + m.dose);
-            if (m.timing) detailed.push("복용 조건: " + m.timing);
+            if (typeof m.timing === "string" && m.timing.trim().length > 0) {
+              detailed.push("복용 조건: " + m.timing);
+            } else {
+              detailed.push("복용 조건: 별도 입력 없음");
+            }
             if (m.frequency) detailed.push("복용 횟수: " + m.frequency);
             if (m.duration) detailed.push("며칠분: " + m.duration);
 
@@ -2896,7 +2951,7 @@ function refreshArticleMissing(article, medication) {
       ["name", "약 이름"],
       ["dose", "1회 먹는 양"],
       ["frequency", "복용 횟수"],
-      ["timing", "복용 시점"],
+      ["timing", "복용 조건(선택 입력)"],
       ["duration", "며칠분"]
     ];
     var types = {
@@ -2976,7 +3031,10 @@ function refreshArticleMissing(article, medication) {
           input.type = "text";
           input.id = key + "-" + nextReviewState.medications[index].reviewId;
           input.value = nextReviewState.medications[index].values[key];
-          input.placeholder = "원본을 보고 확인해 주세요";
+          input.placeholder = key === "timing" ? "식전/식후 등" : "원본을 보고 확인해 주세요";
+          if (key === "timing") {
+            input.className = "medication-timing-input";
+          }
           input.setAttribute(
             "aria-label",
             "약 " + (index + 1) + " " + entry[1] + " 수정"
@@ -3747,7 +3805,11 @@ function refreshArticleMissing(article, medication) {
         var parts = [];
         if (m.name) parts.push(m.name);
         if (m.dose) parts.push("1회량: " + m.dose);
-        if (m.timing) parts.push("복용 조건: " + m.timing);
+        if (typeof m.timing === "string" && m.timing.trim().length > 0) {
+          parts.push("복용 조건: " + m.timing);
+        } else {
+          parts.push("복용 조건: 별도 입력 없음");
+        }
         if (m.frequency) parts.push("복용 횟수: " + m.frequency);
         if (m.duration) parts.push("며칠분: " + m.duration);
         lines.push(parts.join(" / "));
