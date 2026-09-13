@@ -469,6 +469,7 @@
     #reviewWorkspace { display: none !important; }
     #draftCard { display: none !important; }
     #sourceCard { display: none !important; }
+    #saveAllCardsImageHint { display: none !important; }
 
     #resultTrack {
       display: block !important;
@@ -1023,7 +1024,10 @@
         <button type="button" id="backToEditBtn" class="btn-secondary">내용 다시 수정</button>
         <button type="button" id="printBtn" class="btn-secondary" disabled>인쇄 / 저장</button>
         <button type="button" id="saveCardImageBtn" class="btn-secondary" disabled>현재 카드 이미지 저장</button>
+        <button type="button" id="saveAllCardsImageBtn" class="btn-secondary" disabled>전체 시간표 이미지 저장</button>
       </div>
+
+      <div id="saveAllCardsImageHint" class="screen-only" style="margin-top:8px; color:#1A202C; font-size:14pt; font-weight:500;">아침·점심·저녁·그 외를 한 장의 이미지로 저장합니다.</div>
 
       <div id="imageExportStatus" role="status" aria-live="polite" style="display:none; margin-top:12px; color:#1A202C; font-size:15pt; font-weight:600;"></div>
 
@@ -1227,6 +1231,7 @@
   var copyFallbackText = document.getElementById("copyFallbackText");
   var saveCardImageBtn = document.getElementById("saveCardImageBtn");
   var imageExportStatus = document.getElementById("imageExportStatus");
+  var saveAllCardsImageBtn = document.getElementById("saveAllCardsImageBtn");
 
   function setProcessing(active) {
     isProcessing = active;
@@ -1257,6 +1262,33 @@
     errCard.style.display = "none";
     resultCard.style.display = "none";
     status.style.display = "none";
+  }
+
+  function createAllCardsImageBlob(resultCardsElement) {
+    if (!resultCardsElement) {
+      return Promise.reject(new Error("결과 카드 컨테이너가 없습니다."));
+    }
+    var children = resultCardsElement.children;
+    if (!children || children.length !== 4) {
+      return Promise.reject(new Error("시간표 카드가 4개 필요합니다."));
+    }
+    for (var i = 0; i < 4; i++) {
+      var child = children[i];
+      var cls = child.className && String(child.className);
+      if (!cls || cls.split(/\s+/).indexOf("result-card-page") === -1) {
+        return Promise.reject(new Error("시간표 카드 형식이 올바르지 않습니다."));
+      }
+    }
+    var tempDiv = null;
+    try { tempDiv = document.createElement("div"); tempDiv.className = "result-card-page"; } catch (e) {
+      return Promise.reject(new Error("임시 카드 페이지를 만들지 못했습니다."));
+    }
+    try {
+      for (var j = 0; j < 4; j++) { tempDiv.appendChild(children[j].cloneNode(true)); }
+    } catch (e) {
+      return Promise.reject(new Error("시간표 카드 복제에 실패했습니다."));
+    }
+    return createCardImageBlob(tempDiv);
   }
 
   function createCardImageBlob(cardElement) {
@@ -4131,7 +4163,7 @@ function refreshArticleMissing(article, medication) {
   }
 
   function updateExportButtonIfReady() {
-    if (!saveCardImageBtn) return;
+    if (!saveCardImageBtn || !saveAllCardsImageBtn) return;
 
     var cards = document.getElementById("resultCards");
     var ready =
@@ -4145,6 +4177,7 @@ function refreshArticleMissing(article, medication) {
       cards.children.length === 4;
 
     saveCardImageBtn.disabled = !ready;
+    saveAllCardsImageBtn.disabled = !ready;
   }
 
   var exportInProgress = false;
@@ -4221,13 +4254,50 @@ function refreshArticleMissing(article, medication) {
   }
 
   saveCardImageBtn.addEventListener("click", function () {
+    exportCardImage(false);
+  });
+  saveAllCardsImageBtn.addEventListener("click", function () {
+    exportCardImage(true);
+  });
+
+  function exportCardImage(saveAll) {
     updateExportButtonIfReady();
     if (!saveCardImageBtn || saveCardImageBtn.disabled) return;
 
-    var cardEl = currentResultCardPage();
-    if (!cardEl) {
-      if (typeof setShareStatus === "function") setShareStatus("시간표를 먼저 확인해 주세요.");
-      return;
+    var cardEl = null;
+    var filename = null;
+
+    if (saveAll) {
+      var resultCardsEl = document.getElementById("resultCards");
+      if (!resultCardsEl) {
+        if (typeof setShareStatus === "function") setShareStatus("시간표를 먼저 확인해 주세요.");
+        return;
+      }
+      filename = "약먹는시간표-전체.png";
+    } else {
+      cardEl = currentResultCardPage();
+      if (!cardEl) {
+        if (typeof setShareStatus === "function") setShareStatus("시간표를 먼저 확인해 주세요.");
+        return;
+      }
+      var filenameBase = "";
+      var titleEl = cardEl.querySelector(".result-card-page-title");
+      if (titleEl) {
+        var t = titleEl.textContent;
+        if (typeof t === "string" && t.trim().length > 0) {
+          filenameBase = t.trim().replace(/[^a-zA-Z0-9가-힣]/g, "_");
+        }
+      }
+      filename = filenameBase ? ("약먹는시간표_" + filenameBase + ".png") : "약먹는시간표.png";
+    }
+
+    var resultCardsEl = null;
+    if (saveAll) {
+      resultCardsEl = document.getElementById("resultCards");
+      if (!resultCardsEl) {
+        if (typeof setShareStatus === "function") setShareStatus("시간표를 먼저 확인해 주세요.");
+        return;
+      }
     }
 
     var snapshot = confirmedSchedule;
@@ -4241,21 +4311,13 @@ function refreshArticleMissing(article, medication) {
       imageExportStatus.style.display = "block";
     }
 
-    var filenameBase = "";
-    var titleEl = cardEl.querySelector(".result-card-page-title");
-    if (titleEl) {
-      var t = titleEl.textContent;
-      if (typeof t === "string" && t.trim().length > 0) {
-        filenameBase = t.trim().replace(/[^a-zA-Z0-9가-힣]/g, "_");
-      }
-    }
-    var filename = filenameBase ? ("약먹는시간표_" + filenameBase + ".png") : "약먹는시간표.png";
-
     Promise.resolve().then(function () {
       if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
         return;
       }
-      return createCardImageBlob(cardEl);
+      return saveAll
+        ? createAllCardsImageBlob(resultCardsEl)
+        : createCardImageBlob(cardEl);
     }).then(function (blob) {
       if (currentExportAbort !== job || job.cancelled || snapshot !== confirmedSchedule || !canShowConfirmedSchedule() || isProcessing || !resultCard || resultCard.style.display === "none") {
         return;
@@ -4275,6 +4337,9 @@ function refreshArticleMissing(article, medication) {
       }
       if (imageExportStatus) {
         var msg = err && err.message ? err.message : "카드 이미지 저장에 실패했습니다.";
+        if (saveAll && msg && msg.indexOf("이미지가 너무 큽니다.") !== -1) {
+          msg = "전체 이미지가 너무 깁니다. 현재 카드 이미지 저장을 이용해 주세요.";
+        }
         imageExportStatus.textContent = msg;
         imageExportStatus.style.display = "block";
       }
@@ -4285,7 +4350,7 @@ function refreshArticleMissing(article, medication) {
         updateExportButtonIfReady();
       }
     });
-  });
+  }
 
   if (typeof updateShareButtonsIfReady === "function") {
     var origUpdateShareButtonsIfReady = updateShareButtonsIfReady;
