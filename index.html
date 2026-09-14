@@ -1034,17 +1034,18 @@
 
       <section id="calendarReminderPanel" aria-labelledby="calendarReminderTitle" style="margin-top:20px; padding:18px 16px; background:#FAF8F5; border:1px solid #E5E7EB; border-radius:16px;">
         <h3 id="calendarReminderTitle" style="font-size:clamp(15pt,3vw,17pt); font-weight:700; color:#1A202C; margin:0 0 10px;">캘린더 일정 만들기</h3>
-        <p style="font-size:clamp(14pt,2.6vw,16pt); font-weight:500; color:#1A202C; line-height:1.6; margin:0 0 12px;">직접 정한 복약 확인 시간을 캘린더에 추가할 수 있습니다.
-파일을 내려받은 뒤 캘린더에서 일정과 알림 설정을 확인해 주세요.</p>
-        <p style="font-size:clamp(13pt,2.4vw,15pt); font-weight:500; color:#4A5568; line-height:1.55; margin:0;">약 이름과 개인정보는 일정에 포함하지 않습니다.
-이후 시간표를 수정해도 이미 추가한 캘린더 일정은
-자동으로 변경되지 않습니다.</p>
+        <p style="font-size:clamp(14pt,2.6vw,16pt); font-weight:500; color:#1A202C; line-height:1.6; margin:0 0 12px;">확인할 기간과 시각을 정하고 미리보기를 확인한 뒤 일정 파일을 내려받으세요.
+내려받은 파일은 사용하는 캘린더에서 직접 가져와야 합니다.</p>
+        <p style="font-size:clamp(13pt,2.4vw,15pt); font-weight:500; color:#4A5568; line-height:1.55; margin:0;">일정 파일에는 약 이름·용량·개인정보를 넣지 않습니다.
+파일을 캘린더에 추가한 뒤에는 일정과 알림 설정을 직접 확인해야 합니다.
+이후 시간표를 수정해도 이미 추가한 일정은 자동으로 변경되거나 삭제되지 않습니다.</p>
 
         <div style="margin-top:16px;">
 
           <div style="margin-top:6px; color:#1A202C; font-size:clamp(14pt,2.6vw,16pt); font-weight:500; line-height:1.55;">
-            알림을 받을 시작일과 종료일을 직접 정해 주세요.
-            약 복용 종료일을 자동으로 계산하는 기능은 아닙니다.
+            확인 일정은 한국시간 기준으로 설정합니다.
+시작일과 종료일을 모두 포함해 매일 반복할 기간을 직접 정해 주세요.
+약별 복용 종료일을 자동으로 계산하는 기능은 아닙니다.
           </div>
 
           <div style="margin-top:14px;">
@@ -1125,7 +1126,7 @@
         </div>
 
         <div style="margin-top:16px;">
-          <button type="button" id="downloadCalendarBtn" class="btn-secondary" disabled>캘린더 일정 파일 만들기</button>
+          <button type="button" id="downloadCalendarBtn" class="btn-secondary" disabled>캘린더 일정 파일 다운로드</button>
         </div>
       </section>
 
@@ -1199,6 +1200,8 @@
   </div>
 
 <script>
+
+
 (function () {
   var updatingDocumentReview = false;
   var confirmedSchedule = null;
@@ -4196,6 +4199,13 @@ function refreshArticleMissing(article, medication) {
   }
 
   function refreshCalendarValidation() {
+    var calendarDownloadControl =
+      document.getElementById("downloadCalendarBtn");
+
+    if (calendarDownloadControl) {
+      calendarDownloadControl.disabled = true;
+    }
+
     var panel = document.getElementById("calendarReminderPanel");
     if (!panel) {
       return;
@@ -4327,6 +4337,10 @@ function refreshArticleMissing(article, medication) {
       var errorFields = Object.keys(errors);
 
       var hasError = errorFields.length > 0;
+      if (calendarDownloadControl) {
+        calendarDownloadControl.disabled = !validation.valid;
+      }
+
       if (statusEl) {
         statusEl.textContent = hasError
           ? "날짜와 선택한 확인 시간을 확인해 주세요."
@@ -5323,9 +5337,419 @@ function refreshArticleMissing(article, medication) {
   }
 
   wireCalendarValidationEvents();
+
   refreshCalendarValidation();
 
+  
+    
+  var calendarDownloadButton = document.getElementById("downloadCalendarBtn");
+
+  if (calendarDownloadButton) {
+    calendarDownloadButton.addEventListener("click", function () {
+      if (
+        this.disabled ||
+        isProcessing ||
+        !canShowConfirmedSchedule() ||
+        !confirmedSchedule ||
+        !resultCard ||
+        resultCard.style.display === "none"
+      ) {
+        return;
+      }
+
+      var statusEl = document.getElementById("calendarValidationStatus");
+
+      try {
+        var settings = {
+          startDate: document.getElementById("calendarStartDate").value,
+          endDate: document.getElementById("calendarEndDate").value,
+          slots: []
+        };
+
+        [
+          ["morning", "calendarMorningEnabled", "calendarMorningTime"],
+          ["noon", "calendarNoonEnabled", "calendarNoonTime"],
+          ["evening", "calendarEveningEnabled", "calendarEveningTime"],
+          ["bedtime", "calendarBedtimeEnabled", "calendarBedtimeTime"]
+        ].forEach(function (item) {
+          var checkbox = document.getElementById(item[1]);
+          var timeInput = document.getElementById(item[2]);
+
+          if (checkbox.checked) {
+            settings.slots.push({
+              slot: item[0],
+              time: timeInput.value
+            });
+          }
+        });
+
+        var eligibleSlots = getEligibleCalendarSlots(confirmedSchedule);
+        var validation = validateCalendarReminderSettings(
+          settings,
+          eligibleSlots
+        );
+
+        if (!validation.valid) {
+          refreshCalendarValidation();
+          return;
+        }
+
+        if (
+          typeof crypto === "undefined" ||
+          typeof crypto.getRandomValues !== "function"
+        ) {
+          throw new Error("캘린더 파일 생성 기능을 사용할 수 없습니다.");
+        }
+
+        var bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+
+        var uidSeed = "";
+        for (var i = 0; i < bytes.length; i++) {
+          uidSeed += ("0" + bytes[i].toString(16)).slice(-2);
+        }
+
+        var metadata = {
+          uidSeed: uidSeed,
+          generatedAt: new Date().toISOString()
+        };
+
+        var icsText = buildCalendarIcs(
+          settings,
+          eligibleSlots,
+          metadata
+        );
+
+        downloadCalendarIcs(icsText);
+
+        if (statusEl) {
+          statusEl.textContent =
+            "일정 파일 다운로드를 요청했습니다. 파일을 캘린더에 추가한 뒤 일정과 알림 설정을 확인해 주세요.";
+        }
+      } catch (error) {
+        if (statusEl) {
+          statusEl.textContent =
+            "일정 파일을 만들지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.";
+        }
+      }
+    });
+  }
+
+function downloadCalendarIcs(icsText) {
+    if (typeof icsText !== "string" || icsText.trim().length === 0) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var objectUrl = null;
+    var a = null;
+
+    try {
+      var blob = new Blob([icsText], {
+        type: "text/calendar;charset=utf-8"
+      });
+
+      objectUrl = URL.createObjectURL(blob);
+      a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = "복약-확인-일정.ics";
+      a.style.display = "none";
+
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(function () {
+        URL.revokeObjectURL(objectUrl);
+      }, 60000);
+    } catch (error) {
+      if (objectUrl !== null) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      throw error;
+    } finally {
+      if (a && a.parentNode) {
+        a.parentNode.removeChild(a);
+      }
+    }
+  }
+function buildCalendarIcs(settings, eligibleSlots, metadata) {
+    var validation = validateCalendarReminderSettings(settings, eligibleSlots);
+    if (!validation.valid) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var uidSeed = metadata.uidSeed;
+    var generatedAt = metadata.generatedAt;
+
+    if (typeof uidSeed !== "string" || uidSeed.length < 1 || uidSeed.length > 64 || !/^[A-Za-z0-9-]+$/.test(uidSeed)) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    if (
+      typeof generatedAt !== "string" ||
+      !/^[12][0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}Z$/.test(generatedAt)
+    ) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var generatedDate = new Date(generatedAt);
+
+    if (
+      !Number.isFinite(generatedDate.getTime()) ||
+      generatedDate.toISOString() !== generatedAt
+    ) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var generatedUtcSeconds = Math.floor(
+      generatedDate.getTime() / 1000
+    );
+
+    var startDate = settings.startDate;
+    var endDate = settings.endDate;
+
+    var startParts = startDate.split("-");
+    var endParts = endDate.split("-");
+    var startYear = Number(startParts[0]);
+    var startMonth = Number(startParts[1]);
+    var startDay = Number(startParts[2]);
+    var endYear = Number(endParts[0]);
+    var endMonth = Number(endParts[1]);
+    var endDay = Number(endParts[2]);
+    if (!isFinite(startYear) || !isFinite(startMonth) || !isFinite(startDay) ||
+        !isFinite(endYear) || !isFinite(endMonth) || !isFinite(endDay)) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var startLocalMs = Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0);
+    var endLocalMs = Date.UTC(endYear, endMonth - 1, endDay, 0, 0, 0);
+    if (isNaN(startLocalMs) || isNaN(endLocalMs)) {
+      throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+    }
+
+    var slotTimeMap = {
+      morning: "08:30",
+      noon: "13:00",
+      evening: "19:30",
+      bedtime: "22:00"
+    };
+
+    var slotOrder = ["morning", "noon", "evening", "bedtime"];
+    var orderedCheckedSlots = [];
+    for (var si = 0; si < slotOrder.length; si++) {
+      var key = slotOrder[si];
+      for (var sj = 0; sj < settings.slots.length; sj++) {
+        if (settings.slots[sj].slot === key) {
+          orderedCheckedSlots.push(settings.slots[sj]);
+          break;
+        }
+      }
+    }
+
+    var slotTitleMap = {
+      morning: "아침 복약 확인",
+      noon: "점심 복약 확인",
+      evening: "저녁 복약 확인",
+      bedtime: "자기 전 복약 확인"
+    };
+
+    var lines = [];
+    var crlf = "\r\n";
+
+    lines.push("BEGIN:VCALENDAR");
+    lines.push("VERSION:2.0");
+    lines.push("PRODID:-//medicine-schedule-largeprint//Calendar Reminder//KO");
+    lines.push("CALSCALE:GREGORIAN");
+
+    for (var i = 0; i < orderedCheckedSlots.length; i++) {
+      var entry = orderedCheckedSlots[i];
+      var slot = entry.slot;
+      var time = entry.time;
+
+      if (typeof slot !== "string" || slot.trim().length === 0) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      if (!slotTimeMap.hasOwnProperty(slot)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      if (typeof time !== "string" || !/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(time) && !/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(time.trim())) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      time = time.trim();
+
+      var timeParts = time.split(":");
+      var localHour = Number(timeParts[0]);
+      var localMinute = Number(timeParts[1]);
+      if (!isFinite(localHour) || !isFinite(localMinute)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+
+      var localMs = Date.UTC(startYear, startMonth - 1, startDay, localHour, localMinute, 0);
+      var utcMs = localMs - 9 * 60 * 60 * 1000;
+      if (isNaN(utcMs)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      var utcD = new Date(utcMs);
+      var utcYear = utcD.getUTCFullYear();
+      var utcMonth = utcD.getUTCMonth() + 1;
+      var utcDay = utcD.getUTCDate();
+      var utcHour = utcD.getUTCHours();
+      var utcMinute = utcD.getUTCMinutes();
+      var utcSecond = utcD.getUTCSeconds();
+      if (!isFinite(utcYear) || !isFinite(utcMonth) || !isFinite(utcDay) ||
+          !isFinite(utcHour) || !isFinite(utcMinute) || !isFinite(utcSecond)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+
+      var count = Math.round((endLocalMs - startLocalMs) / (24 * 60 * 60 * 1000)) + 1;
+      if (!isFinite(count) || count < 1) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+
+      var uid = uidSeed + "-" + slot;
+      var dtstamp = formatUtcDatetime(generatedUtcSeconds);
+      var dtstart = formatUtcDatetime(Math.floor(utcMs / 1000));
+
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:" + escapeText(uid));
+      lines.push("DTSTAMP:" + dtstamp);
+      lines.push("DTSTART:" + dtstart);
+      lines.push("DURATION:PT1M");
+      lines.push("RRULE:FREQ=DAILY;COUNT=" + String(count));
+      lines.push("SUMMARY:" + escapeText(slotTitleMap[slot]));
+      lines.push("DESCRIPTION:" + escapeText("사용자가 정한 확인 일정입니다. 복용 여부를 자동으로 기록하지 않습니다."));
+      lines.push("TRANSP:TRANSPARENT");
+      lines.push("BEGIN:VALARM");
+      lines.push("ACTION:DISPLAY");
+      lines.push("TRIGGER:PT0S");
+      lines.push("DESCRIPTION:" + escapeText("복약 확인 시간입니다."));
+      lines.push("END:VALARM");
+      lines.push("END:VEVENT");
+    }
+
+    lines.push("END:VCALENDAR");
+
+    var raw = lines.join(crlf) + crlf;
+    return foldIcsText(raw);
+
+    function escapeText(value) {
+      if (typeof value !== "string") {
+        value = String(value);
+      }
+      var out = [];
+      var input = value;
+      for (var p = 0; p < input.length; p++) {
+        var ch = input.charAt(p);
+        var code = input.charCodeAt(p);
+        if (ch === "\\") {
+          out.push("\\\\");
+          continue;
+        }
+        if (ch === "\r" || ch === "\n") {
+          if (ch === "\r" && input.charAt(p + 1) === "\n") {
+            p += 1;
+          }
+          out.push("\\n");
+          continue;
+        }
+        if (ch === ";") {
+          out.push("\\;");
+          continue;
+        }
+        if (ch === ",") {
+          out.push("\\,");
+          continue;
+        }
+        out.push(ch);
+      }
+      return out.join("");
+    }
+
+    function formatUtcDatetime(totalSeconds) {
+      if (!isFinite(totalSeconds)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      var d = new Date(totalSeconds * 1000);
+      var y = d.getUTCFullYear();
+      var m = d.getUTCMonth() + 1;
+      var day = d.getUTCDate();
+      var h = d.getUTCHours();
+      var min = d.getUTCMinutes();
+      var s = d.getUTCSeconds();
+      if (!isFinite(y) || !isFinite(m) || !isFinite(day) ||
+          !isFinite(h) || !isFinite(min) || !isFinite(s)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      return pad4(y) + pad2(m) + pad2(day) + "T" + pad2(h) + pad2(min) + pad2(s) + "Z";
+    }
+
+    function pad2(n) {
+      n = Number(n);
+      if (!isFinite(n)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      return (n < 10 ? "0" : "") + String(n);
+    }
+
+    function pad4(n) {
+      n = Number(n);
+      if (!isFinite(n)) {
+        throw new Error("캘린더 일정 문자열을 만들 수 없습니다.");
+      }
+      var s = String(n);
+      while (s.length < 4) {
+        s = "0" + s;
+      }
+      return s;
+    }
+
+    function foldIcsText(text) {
+      var crlf = "\r\n";
+      var encoder = new TextEncoder();
+
+      var logicalLines = text.split(crlf);
+      while (logicalLines.length > 1 && logicalLines[logicalLines.length - 1].length === 0) {
+        logicalLines.pop();
+      }
+
+      var foldedLines = [];
+      for (var li = 0; li < logicalLines.length; li++) {
+        var logicalLine = logicalLines[li];
+        var folded = foldLine(logicalLine, encoder);
+        for (var f = 0; f < folded.length; f++) {
+          foldedLines.push(folded[f]);
+        }
+      }
+      return foldedLines.join(crlf) + crlf;
+
+      function foldLine(line, encoder) {
+        var folded = [];
+        var currentLine = "";
+        var currentBytes = 0;
+
+        for (var character of line) {
+          var characterBytes = encoder.encode(character).length;
+
+          if (currentBytes + characterBytes > 75) {
+            folded.push(currentLine);
+            currentLine = " ";
+            currentBytes = 1;
+          }
+
+          currentLine += character;
+          currentBytes += characterBytes;
+        }
+
+        folded.push(currentLine);
+        return folded;
+      }
+    }
+  }
+
   })();
+
 
 </script>
 </body>
